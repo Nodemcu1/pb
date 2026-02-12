@@ -1219,8 +1219,7 @@ namespace Oxide.Plugins
                 return;
             }
 
-            var suffix = RoundResetDelaySeconds == 1 ? "second" : "seconds";
-            Broadcast($"Next round in {RoundResetDelaySeconds} {suffix}.");
+            Broadcast($"Next round in {FormatSeconds(RoundResetDelaySeconds)}.");
             timer.Once(RoundResetDelaySeconds, StartRound);
         }
 
@@ -1364,10 +1363,7 @@ namespace Oxide.Plugins
             GiveItem(player, PaintballGunShortname, 1, player.inventory.containerBelt);
             GiveItem(player, PaintballAmmoShortname, PaintballAmmoAmount, player.inventory.containerMain);
             var maxHealth = player.MaxHealth();
-            if (player.health < maxHealth)
-            {
-                player.SetHealth(maxHealth);
-            }
+            player.SetHealth(maxHealth);
             player.SendNetworkUpdateImmediate();
         }
 
@@ -1407,6 +1403,12 @@ namespace Oxide.Plugins
         private string SideLabel(TeamSide side)
         {
             return side == TeamSide.A ? "Side A" : "Side B";
+        }
+
+        private string FormatSeconds(int seconds)
+        {
+            var suffix = seconds == 1 ? "second" : "seconds";
+            return $"{seconds} {suffix}";
         }
 
         private void TeleportToSpawn(BasePlayer player, SpawnPoint spawn)
