@@ -21,6 +21,8 @@ namespace Oxide.Plugins
         private const string HudScoreUiName = "PaintballArena.HUD.Scoreboard";
         private const string HudLobbyUiName = "PaintballArena.HUD.LobbyButton";
         private const string LobbyUiName = "PaintballArena.LobbyUI";
+        private const string HudScoreAnchorMin = "0.3 0.93";
+        private const string HudScoreAnchorMax = "0.7 0.99";
         private const string HudScoreImageName = "PaintballArena.HUD.Scoreboard.Background";
         private const string HudLobbyImageName = "PaintballArena.HUD.Lobby.Background";
         private const string LobbyBackgroundImageName = "PaintballArena.Lobby.Background";
@@ -745,8 +747,8 @@ namespace Oxide.Plugins
             var themeB = CurrentThemeB();
             var status = MatchStatusLabel();
             var autoStart = config.AutoStartEnabled ? "On" : "Off";
-            var sideA = $"{GetSideCount(TeamSide.A)}/{MaxPlayersPerSide} (Queue {queueSideA.Count})";
-            var sideB = $"{GetSideCount(TeamSide.B)}/{MaxPlayersPerSide} (Queue {queueSideB.Count})";
+            var sideA = $"{GetSideCount(TeamSide.A)}/{MaxPlayersPerSide} (Queued {queueSideA.Count})";
+            var sideB = $"{GetSideCount(TeamSide.B)}/{MaxPlayersPerSide} (Queued {queueSideB.Count})";
             return $"{themeA.Name} vs {themeB.Name}\nScore: {scoreA} - {scoreB} ({MatchRuleLabel()})\nState: {status} | Auto Start: {autoStart}\nSide A: {sideA}\nSide B: {sideB}";
         }
 
@@ -770,21 +772,23 @@ namespace Oxide.Plugins
             DestroyHud(player);
 
             var container = new CuiElementContainer();
-            var scoreboardHasImage = HasImage(HudScoreImageName);
+            var scoreboardImage = GetImage(HudScoreImageName);
+            var scoreboardHasImage = !string.IsNullOrEmpty(scoreboardImage);
             var scoreboard = container.Add(new CuiPanel
             {
                 Image = { Color = scoreboardHasImage ? "0 0 0 0" : "0.08 0.08 0.08 0.75" },
-                RectTransform = { AnchorMin = "0.3 0.93", AnchorMax = "0.7 0.99" }
+                RectTransform = { AnchorMin = HudScoreAnchorMin, AnchorMax = HudScoreAnchorMax }
             }, "Hud", HudScoreUiName);
 
             if (scoreboardHasImage)
             {
-                AddBackgroundImage(container, scoreboard, HudScoreImageName);
+                AddBackgroundImage(container, scoreboard, scoreboardImage);
             }
 
             AddLabel(container, scoreboard, ScoreboardText(), "0 0", "1 1", 12);
 
-            var lobbyButtonHasImage = HasImage(HudLobbyImageName);
+            var lobbyButtonImage = GetImage(HudLobbyImageName);
+            var lobbyButtonHasImage = !string.IsNullOrEmpty(lobbyButtonImage);
             var lobbyButtonPanel = container.Add(new CuiPanel
             {
                 Image = { Color = lobbyButtonHasImage ? "0 0 0 0" : "0.2 0.2 0.2 0.85" },
@@ -793,7 +797,7 @@ namespace Oxide.Plugins
 
             if (lobbyButtonHasImage)
             {
-                AddBackgroundImage(container, lobbyButtonPanel, HudLobbyImageName);
+                AddBackgroundImage(container, lobbyButtonPanel, lobbyButtonImage);
             }
 
             container.Add(new CuiButton
@@ -831,7 +835,8 @@ namespace Oxide.Plugins
             var themeB = CurrentThemeB();
 
             var container = new CuiElementContainer();
-            var lobbyHasImage = HasImage(LobbyBackgroundImageName);
+            var lobbyImage = GetImage(LobbyBackgroundImageName);
+            var lobbyHasImage = !string.IsNullOrEmpty(lobbyImage);
             var lobbyPanel = container.Add(new CuiPanel
             {
                 Image = { Color = lobbyHasImage ? "0 0 0 0.75" : "0 0 0 0.85" },
@@ -841,7 +846,7 @@ namespace Oxide.Plugins
 
             if (lobbyHasImage)
             {
-                AddBackgroundImage(container, lobbyPanel, LobbyBackgroundImageName);
+                AddBackgroundImage(container, lobbyPanel, lobbyImage);
             }
 
             AddLabel(container, lobbyPanel, "Paintball Lobby", "0.3 0.86", "0.7 0.93", 24);
@@ -1555,14 +1560,8 @@ namespace Oxide.Plugins
             return ImageLibrary?.Call<string>("GetImage", name);
         }
 
-        private bool HasImage(string name)
+        private void AddBackgroundImage(CuiElementContainer container, string parent, string image)
         {
-            return !string.IsNullOrEmpty(GetImage(name));
-        }
-
-        private void AddBackgroundImage(CuiElementContainer container, string parent, string imageName)
-        {
-            var image = GetImage(imageName);
             if (string.IsNullOrEmpty(image))
             {
                 return;
@@ -1584,7 +1583,8 @@ namespace Oxide.Plugins
             DestroyAdminUi(player);
 
             var container = new CuiElementContainer();
-            var adminHasImage = HasImage(AdminBackgroundImageName);
+            var adminImage = GetImage(AdminBackgroundImageName);
+            var adminHasImage = !string.IsNullOrEmpty(adminImage);
             var adminPanel = container.Add(new CuiPanel
             {
                 Image = { Color = adminHasImage ? "0 0 0 0.85" : "0.08 0.08 0.08 0.92" },
@@ -1594,7 +1594,7 @@ namespace Oxide.Plugins
 
             if (adminHasImage)
             {
-                AddBackgroundImage(container, adminPanel, AdminBackgroundImageName);
+                AddBackgroundImage(container, adminPanel, adminImage);
             }
 
             AddLabel(container, adminPanel, "Paintball Arena Admin Setup", "0.25 0.85", "0.75 0.93", 20);
