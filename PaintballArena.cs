@@ -1150,7 +1150,7 @@ namespace Oxide.Plugins
         private void BeginMatch()
         {
             matchState = MatchState.Live;
-            Broadcast($"Paintball match is live! First to {ScoreLimit}.");
+            Broadcast("Paintball match is live! First to five.");
             StartRound();
             TeleportQueuedPlayersToSpectator();
         }
@@ -1231,6 +1231,11 @@ namespace Oxide.Plugins
             }
 
             var ammoType = info.AmmoType?.shortname;
+            if (string.IsNullOrEmpty(ammoType))
+            {
+                return false;
+            }
+
             return ammoType == PaintballAmmoShortname;
         }
 
@@ -1356,7 +1361,7 @@ namespace Oxide.Plugins
             GiveItem(player, "paintballoveralls.suit", 1, player.inventory.containerWear);
             GiveItem(player, PaintballGunShortname, 1, player.inventory.containerBelt);
             GiveItem(player, PaintballAmmoShortname, PaintballAmmoAmount, player.inventory.containerMain);
-            player.health = player.MaxHealth();
+            player.SetHealth(player.MaxHealth());
             player.SendNetworkUpdateImmediate();
         }
 
