@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
@@ -44,7 +45,7 @@ namespace Oxide.Plugins
         private const int ChatSizeNormal = 14;
         private const int ChatSizeLarge = 16;
         private static readonly HashSet<int> CountdownAnnouncementSeconds = new HashSet<int> { 5, 3, 1 };
-        private static readonly Dictionary<string, string> ThemeChatColors = new Dictionary<string, string>(System.StringComparer.OrdinalIgnoreCase)
+        private static readonly Dictionary<string, string> ThemeChatColors = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["orange"] = "#ffa500",
             ["green"] = "#4caf50",
@@ -1689,6 +1690,11 @@ namespace Oxide.Plugins
         private string SideChatColor(TeamSide side)
         {
             var theme = GetThemeForSide(side);
+            if (theme == null || string.IsNullOrEmpty(theme.Name))
+            {
+                return ChatInfoColor;
+            }
+
             if (ThemeChatColors.TryGetValue(theme.Name, out var color))
             {
                 return color;
