@@ -20,7 +20,6 @@ namespace Oxide.Plugins
         private readonly Dictionary<ulong, TeamSide> playerSides = new Dictionary<ulong, TeamSide>();
         private readonly List<ulong> queueSideA = new List<ulong>();
         private readonly List<ulong> queueSideB = new List<ulong>();
-        private static readonly List<ulong> EmptyQueue = new List<ulong>();
         private readonly List<TeamTheme> teamThemes = new List<TeamTheme>
         {
             new TeamTheme("Orange", "1 0.5 0 0.9"),
@@ -640,8 +639,7 @@ namespace Oxide.Plugins
 
         private TeamSide GetPlayerSide(ulong userId)
         {
-            TeamSide side;
-            return playerSides.TryGetValue(userId, out side) ? side : TeamSide.None;
+            return playerSides.TryGetValue(userId, out var side) ? side : TeamSide.None;
         }
 
         private void RemovePlayerFromSideAndQueue(BasePlayer player)
@@ -658,8 +656,7 @@ namespace Oxide.Plugins
 
         private TeamSide RemovePlayerFromSide(ulong userId)
         {
-            TeamSide side;
-            if (playerSides.TryGetValue(userId, out side))
+            if (playerSides.TryGetValue(userId, out var side))
             {
                 playerSides.Remove(userId);
                 return side;
@@ -727,7 +724,7 @@ namespace Oxide.Plugins
                 return queueSideB;
             }
 
-            return EmptyQueue;
+            return new List<ulong>();
         }
 
         private void TryPromoteQueuedPlayers(TeamSide side)
