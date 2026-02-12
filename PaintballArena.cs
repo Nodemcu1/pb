@@ -1150,7 +1150,7 @@ namespace Oxide.Plugins
         private void BeginMatch()
         {
             matchState = MatchState.Live;
-            Broadcast($"Paintball match is live! First to {ScoreLimit}.");
+            Broadcast($"Paintball match is live! {MatchRuleLabel()}");
             StartRound();
             TeleportQueuedPlayersToSpectator();
         }
@@ -1403,6 +1403,11 @@ namespace Oxide.Plugins
         private string SideLabel(TeamSide side)
         {
             return side == TeamSide.A ? "Side A" : "Side B";
+        }
+
+        private string MatchRuleLabel()
+        {
+            return $"First to {ScoreLimit}.";
         }
 
         private string FormatSeconds(int seconds)
