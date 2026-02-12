@@ -1219,9 +1219,8 @@ namespace Oxide.Plugins
                 return;
             }
 
-            var delaySeconds = Mathf.CeilToInt(RoundResetDelay);
-            Broadcast($"Next round in {delaySeconds} seconds.");
-            timer.Once(delaySeconds, StartRound);
+            Broadcast($"Next round in {RoundResetDelay:0} seconds.");
+            timer.Once(RoundResetDelay, StartRound);
         }
 
         private bool IsPaintballHit(HitInfo info)
@@ -1358,7 +1357,11 @@ namespace Oxide.Plugins
             GiveItem(player, "paintballoveralls.suit", 1, player.inventory.containerWear);
             GiveItem(player, PaintballGunShortname, 1, player.inventory.containerBelt);
             GiveItem(player, PaintballAmmoShortname, PaintballAmmoAmount, player.inventory.containerMain);
-            player.SetHealth(player.MaxHealth());
+            var maxHealth = player.MaxHealth();
+            if (player.health < maxHealth)
+            {
+                player.SetHealth(maxHealth);
+            }
             player.SendNetworkUpdateImmediate();
         }
 
