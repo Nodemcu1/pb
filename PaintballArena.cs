@@ -42,6 +42,15 @@ namespace Oxide.Plugins
         private const string ChatInfoColor = "#f5f5f5";
         private const int ChatSizeNormal = 14;
         private const int ChatSizeLarge = 16;
+        private static readonly HashSet<int> CountdownAnnouncementSeconds = new HashSet<int> { 5, 3, 1 };
+        private static readonly Dictionary<string, string> ThemeChatColors = new Dictionary<string, string>(System.StringComparer.OrdinalIgnoreCase)
+        {
+            ["orange"] = "#ffa500",
+            ["green"] = "#4caf50",
+            ["yellow"] = "#ffd54f",
+            ["blue"] = "#4aa3ff",
+            ["purple"] = "#b26dff"
+        };
 
         private ConfigData config;
         private readonly Dictionary<ulong, TeamSide> playerSides = new Dictionary<ulong, TeamSide>();
@@ -1389,7 +1398,7 @@ namespace Oxide.Plugins
                     return;
                 }
 
-                if (countdownRemaining == 5 || countdownRemaining == 3 || countdownRemaining == 1)
+                if (CountdownAnnouncementSeconds.Contains(countdownRemaining))
                 {
                     Broadcast($"Match starts in {countdownRemaining}...", ChatInfoColor, ChatSizeNormal);
                     RefreshHudForAll();
@@ -1678,21 +1687,12 @@ namespace Oxide.Plugins
         private string SideChatColor(TeamSide side)
         {
             var theme = side == TeamSide.A ? CurrentThemeA() : CurrentThemeB();
-            switch (theme.Name.ToLowerInvariant())
+            if (ThemeChatColors.TryGetValue(theme.Name, out var color))
             {
-                case "orange":
-                    return "#ffa500";
-                case "green":
-                    return "#4caf50";
-                case "yellow":
-                    return "#ffd54f";
-                case "blue":
-                    return "#4aa3ff";
-                case "purple":
-                    return "#b26dff";
-                default:
-                    return ChatInfoColor;
+                return color;
             }
+
+            return ChatInfoColor;
         }
 
         private string MatchRuleLabel()
@@ -1744,7 +1744,7 @@ namespace Oxide.Plugins
                 }
 
                 var theme = side == TeamSide.A ? CurrentThemeA() : CurrentThemeB();
-                var message = $"Hold R and reload for {theme.Name} color.";
+                var message = $"Reload to get {theme.Name} color.";
                 SendReply(player, FormatChat(message, SideChatColor(side), ChatSizeLarge));
             }
         }
