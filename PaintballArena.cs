@@ -20,6 +20,7 @@ namespace Oxide.Plugins
         private readonly Dictionary<ulong, TeamSide> playerSides = new Dictionary<ulong, TeamSide>();
         private readonly List<ulong> queueSideA = new List<ulong>();
         private readonly List<ulong> queueSideB = new List<ulong>();
+        private static readonly List<ulong> EmptyQueue = new List<ulong>();
         private readonly List<TeamTheme> teamThemes = new List<TeamTheme>
         {
             new TeamTheme("Orange", "1 0.5 0 0.9"),
@@ -716,7 +717,17 @@ namespace Oxide.Plugins
 
         private List<ulong> GetQueue(TeamSide side)
         {
-            return side == TeamSide.A ? queueSideA : queueSideB;
+            if (side == TeamSide.A)
+            {
+                return queueSideA;
+            }
+
+            if (side == TeamSide.B)
+            {
+                return queueSideB;
+            }
+
+            return EmptyQueue;
         }
 
         private void TryPromoteQueuedPlayers(TeamSide side)
