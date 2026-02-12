@@ -103,37 +103,67 @@ namespace Oxide.Plugins
         [ChatCommand("pblobby")]
         private void CmdSetLobby(BasePlayer player, string command, string[] args)
         {
-            TrySetLobbySpawn(player);
+            if (!EnsureAdminPlayer(player))
+            {
+                return;
+            }
+
+            SetLobbySpawn(player);
         }
 
         [ChatCommand("pbspectator")]
         private void CmdSetSpectator(BasePlayer player, string command, string[] args)
         {
-            TrySetSpectatorSpawn(player);
+            if (!EnsureAdminPlayer(player))
+            {
+                return;
+            }
+
+            SetSpectatorSpawn(player);
         }
 
         [ChatCommand("pbteama")]
         private void CmdAddTeamA(BasePlayer player, string command, string[] args)
         {
-            TryAddTeamSpawn(player, config.TeamASpawns, "Team A");
+            if (!EnsureAdminPlayer(player))
+            {
+                return;
+            }
+
+            AddTeamSpawn(player, config.TeamASpawns, "Team A");
         }
 
         [ChatCommand("pbteamb")]
         private void CmdAddTeamB(BasePlayer player, string command, string[] args)
         {
-            TryAddTeamSpawn(player, config.TeamBSpawns, "Team B");
+            if (!EnsureAdminPlayer(player))
+            {
+                return;
+            }
+
+            AddTeamSpawn(player, config.TeamBSpawns, "Team B");
         }
 
         [ChatCommand("pbcleara")]
         private void CmdClearTeamA(BasePlayer player, string command, string[] args)
         {
-            TryClearTeamSpawns(player, config.TeamASpawns, "Team A");
+            if (!EnsureAdminPlayer(player))
+            {
+                return;
+            }
+
+            ClearTeamSpawns(player, config.TeamASpawns, "Team A");
         }
 
         [ChatCommand("pbclearb")]
         private void CmdClearTeamB(BasePlayer player, string command, string[] args)
         {
-            TryClearTeamSpawns(player, config.TeamBSpawns, "Team B");
+            if (!EnsureAdminPlayer(player))
+            {
+                return;
+            }
+
+            ClearTeamSpawns(player, config.TeamBSpawns, "Team B");
         }
 
         [ConsoleCommand("paintballarena.openadmin")]
@@ -163,37 +193,73 @@ namespace Oxide.Plugins
         [ConsoleCommand("paintballarena.setlobby")]
         private void ConsoleSetLobby(ConsoleSystem.Arg arg)
         {
-            TrySetLobbySpawn(arg.Player());
+            var player = arg.Player();
+            if (!EnsureAdminPlayer(player))
+            {
+                return;
+            }
+
+            SetLobbySpawn(player);
         }
 
         [ConsoleCommand("paintballarena.setspectator")]
         private void ConsoleSetSpectator(ConsoleSystem.Arg arg)
         {
-            TrySetSpectatorSpawn(arg.Player());
+            var player = arg.Player();
+            if (!EnsureAdminPlayer(player))
+            {
+                return;
+            }
+
+            SetSpectatorSpawn(player);
         }
 
         [ConsoleCommand("paintballarena.addteama")]
         private void ConsoleAddTeamA(ConsoleSystem.Arg arg)
         {
-            TryAddTeamSpawn(arg.Player(), config.TeamASpawns, "Team A");
+            var player = arg.Player();
+            if (!EnsureAdminPlayer(player))
+            {
+                return;
+            }
+
+            AddTeamSpawn(player, config.TeamASpawns, "Team A");
         }
 
         [ConsoleCommand("paintballarena.addteamb")]
         private void ConsoleAddTeamB(ConsoleSystem.Arg arg)
         {
-            TryAddTeamSpawn(arg.Player(), config.TeamBSpawns, "Team B");
+            var player = arg.Player();
+            if (!EnsureAdminPlayer(player))
+            {
+                return;
+            }
+
+            AddTeamSpawn(player, config.TeamBSpawns, "Team B");
         }
 
         [ConsoleCommand("paintballarena.clearteama")]
         private void ConsoleClearTeamA(ConsoleSystem.Arg arg)
         {
-            TryClearTeamSpawns(arg.Player(), config.TeamASpawns, "Team A");
+            var player = arg.Player();
+            if (!EnsureAdminPlayer(player))
+            {
+                return;
+            }
+
+            ClearTeamSpawns(player, config.TeamASpawns, "Team A");
         }
 
         [ConsoleCommand("paintballarena.clearteamb")]
         private void ConsoleClearTeamB(ConsoleSystem.Arg arg)
         {
-            TryClearTeamSpawns(arg.Player(), config.TeamBSpawns, "Team B");
+            var player = arg.Player();
+            if (!EnsureAdminPlayer(player))
+            {
+                return;
+            }
+
+            ClearTeamSpawns(player, config.TeamBSpawns, "Team B");
         }
 
         private bool HasAdminPermission(BasePlayer player)
@@ -201,52 +267,32 @@ namespace Oxide.Plugins
             return player != null && permission.UserHasPermission(player.UserIDString, AdminPermission);
         }
 
-        private void TrySetLobbySpawn(BasePlayer player)
+        private void SetLobbySpawn(BasePlayer player)
         {
-            if (!EnsureAdminPlayer(player))
-            {
-                return;
-            }
-
             config.LobbySpawn = CreateSpawnPoint(player);
             SaveConfig();
             SendReply(player, "Lobby spawn set.");
             OpenAdminUi(player);
         }
 
-        private void TrySetSpectatorSpawn(BasePlayer player)
+        private void SetSpectatorSpawn(BasePlayer player)
         {
-            if (!EnsureAdminPlayer(player))
-            {
-                return;
-            }
-
             config.SpectatorSpawn = CreateSpawnPoint(player);
             SaveConfig();
             SendReply(player, "Spectator spawn set.");
             OpenAdminUi(player);
         }
 
-        private void TryAddTeamSpawn(BasePlayer player, List<SpawnPoint> list, string label)
+        private void AddTeamSpawn(BasePlayer player, List<SpawnPoint> list, string label)
         {
-            if (!EnsureAdminPlayer(player))
-            {
-                return;
-            }
-
             list.Add(CreateSpawnPoint(player));
             SaveConfig();
             SendReply(player, $"{label} spawn added. ({list.Count})");
             OpenAdminUi(player);
         }
 
-        private void TryClearTeamSpawns(BasePlayer player, List<SpawnPoint> list, string label)
+        private void ClearTeamSpawns(BasePlayer player, List<SpawnPoint> list, string label)
         {
-            if (!EnsureAdminPlayer(player))
-            {
-                return;
-            }
-
             list.Clear();
             SaveConfig();
             SendReply(player, $"{label} spawns cleared.");
