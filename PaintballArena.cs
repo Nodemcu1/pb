@@ -38,6 +38,10 @@ namespace Oxide.Plugins
         private const int RoundResetDelaySeconds = 3;
         private const string PaintballGunShortname = "paintballgun";
         private const string PaintballAmmoShortname = "ammo.paintball";
+        private const string ChatPrefixColor = "#ffb347";
+        private const string ChatInfoColor = "#f5f5f5";
+        private const int ChatSizeNormal = 14;
+        private const int ChatSizeLarge = 16;
 
         private ConfigData config;
         private readonly Dictionary<ulong, TeamSide> playerSides = new Dictionary<ulong, TeamSide>();
@@ -1371,7 +1375,7 @@ namespace Oxide.Plugins
 
             matchState = MatchState.Countdown;
             countdownRemaining = MatchCountdownSeconds;
-            Broadcast($"Paintball match starts in {countdownRemaining} seconds!");
+            Broadcast($"Match starts in {countdownRemaining} seconds.", ChatInfoColor, ChatSizeLarge);
             RefreshHudForAll();
             countdownTimer?.Destroy();
             countdownTimer = timer.Repeat(1f, MatchCountdownSeconds, () =>
@@ -1385,8 +1389,12 @@ namespace Oxide.Plugins
                     return;
                 }
 
-                Broadcast($"Match starts in {countdownRemaining}...");
-                if (countdownRemaining % 2 == 0 || countdownRemaining <= 3)
+                if (countdownRemaining == 5 || countdownRemaining == 3 || countdownRemaining == 1)
+                {
+                    Broadcast($"Match starts in {countdownRemaining}...", ChatInfoColor, ChatSizeNormal);
+                }
+
+                if (countdownRemaining <= 5)
                 {
                     RefreshHudForAll();
                 }
@@ -1411,10 +1419,11 @@ namespace Oxide.Plugins
         private void BeginMatch()
         {
             matchState = MatchState.Live;
-            Broadcast($"Paintball match is live! {MatchRuleLabel()}");
+            Broadcast($"Match is live! {MatchRuleLabel()}", "#9be37c", ChatSizeLarge);
             StartRound();
             TeleportQueuedPlayersToSpectator();
             RefreshHudForAll();
+            AnnounceReloadHint();
         }
 
         private void EndMatch(TeamSide winner, BasePlayer caller = null)
@@ -1432,8 +1441,9 @@ namespace Oxide.Plugins
 
             var message = winner == TeamSide.None
                 ? "Match ended in a draw."
-                : $"Match ended. {SideLabel(winner)} wins!";
-            Broadcast(message);
+                : $"{SideLabel(winner)} wins the match!";
+            var messageColor = winner == TeamSide.None ? ChatInfoColor : SideChatColor(winner);
+            Broadcast(message, messageColor, ChatSizeLarge);
 
             TeleportAllToLobby();
             RestoreAllInventories();
@@ -1474,7 +1484,7 @@ namespace Oxide.Plugins
             }
 
             RefreshHudForAll();
-            Broadcast($"{attackerName} hit {victimName}. {SideLabel(scoringSide)} scores!");
+            Broadcast($"{attackerName} hit {victimName}. {SideLabel(scoringSide)} scores!", SideChatColor(scoringSide), ChatSizeLarge);
 
             if (scoreA >= ScoreLimit || scoreB >= ScoreLimit)
             {
@@ -1482,7 +1492,7 @@ namespace Oxide.Plugins
                 return;
             }
 
-            Broadcast($"Next round in {FormatSeconds(RoundResetDelaySeconds)}.");
+            Broadcast($"Next round in {FormatSeconds(RoundResetDelaySeconds)}.", ChatInfoColor, ChatSizeNormal);
             timer.Once(RoundResetDelaySeconds, StartRound);
         }
 
@@ -1669,6 +1679,26 @@ namespace Oxide.Plugins
             return side == TeamSide.A ? "Side A" : "Side B";
         }
 
+        private string SideChatColor(TeamSide side)
+        {
+            var theme = side == TeamSide.A ? CurrentThemeA() : CurrentThemeB();
+            switch (theme.Name.ToLowerInvariant())
+            {
+                case "orange":
+                    return "#ffa500";
+                case "green":
+                    return "#4caf50";
+                case "yellow":
+                    return "#ffd54f";
+                case "blue":
+                    return "#4aa3ff";
+                case "purple":
+                    return "#b26dff";
+                default:
+                    return ChatInfoColor;
+            }
+        }
+
         private string MatchRuleLabel()
         {
             return $"First to {ScoreLimit}.";
@@ -1694,10 +1724,38 @@ namespace Oxide.Plugins
 
         private void Broadcast(string message)
         {
-            if (!string.IsNullOrEmpty(message))
+            Broadcast(message, ChatInfoColor, ChatSizeNormal);
+        }
+
+        private void Broadcast(string message, string color, int size)
+        {
+            if (string.IsNullOrEmpty(message))
             {
-                PrintToChat(message);
+                return;
             }
+
+            PrintToChat(FormatChat(message, color, size));
+        }
+
+        private void AnnounceReloadHint()
+        {
+            foreach (var player in BasePlayer.activePlayerList)
+            {
+                var side = GetPlayerSide(player.userID);
+                if (side == TeamSide.None)
+                {
+                    continue;
+                }
+
+                var theme = side == TeamSide.A ? CurrentThemeA() : CurrentThemeB();
+                var message = $"Hold R and reload to {theme.Name} color.";
+                SendReply(player, FormatChat(message, SideChatColor(side), ChatSizeLarge));
+            }
+        }
+
+        private string FormatChat(string message, string color, int size)
+        {
+            return $"<size={size}><color={ChatPrefixColor}>[Paintball]</color> <color={color}>{message}</color></size>";
         }
 
         private void Reply(BasePlayer player, string message)
