@@ -174,7 +174,10 @@ namespace Oxide.Plugins
                 {
                     throw new JsonException("Config is empty.");
                 }
-                NormalizeConfig();
+                if (NormalizeConfig())
+                {
+                    SaveConfig();
+                }
             }
             catch (System.Exception ex)
             {
@@ -188,17 +191,39 @@ namespace Oxide.Plugins
             Config.WriteObject(config, true);
         }
 
-        private void NormalizeConfig()
+        private bool NormalizeConfig()
         {
             if (config == null)
             {
-                return;
+                return false;
             }
 
-            config.HudScoreboardBackgroundUrl ??= string.Empty;
-            config.HudLobbyButtonBackgroundUrl ??= string.Empty;
-            config.LobbyBackgroundUrl ??= string.Empty;
-            config.AdminBackgroundUrl ??= string.Empty;
+            var changed = false;
+            if (config.HudScoreboardBackgroundUrl == null)
+            {
+                config.HudScoreboardBackgroundUrl = string.Empty;
+                changed = true;
+            }
+
+            if (config.HudLobbyButtonBackgroundUrl == null)
+            {
+                config.HudLobbyButtonBackgroundUrl = string.Empty;
+                changed = true;
+            }
+
+            if (config.LobbyBackgroundUrl == null)
+            {
+                config.LobbyBackgroundUrl = string.Empty;
+                changed = true;
+            }
+
+            if (config.AdminBackgroundUrl == null)
+            {
+                config.AdminBackgroundUrl = string.Empty;
+                changed = true;
+            }
+
+            return changed;
         }
 
         private bool SetImageUrl(BasePlayer player, string key, string url)

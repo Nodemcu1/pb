@@ -11,7 +11,7 @@ Foundation plugin for a Rust paintball arena minigame. Phase 1 covers configurat
 ## UI Background Images (ImageLibrary)
 
 Optional: install the **ImageLibrary** plugin to use URL-based images for UI backgrounds.
-Set the URLs in the config and reload the plugin to apply them.
+Set the URLs directly in the plugin config file (oxide/config/PaintballArena.json) and reload the plugin to apply them.
 
 Config keys:
 
@@ -19,6 +19,17 @@ Config keys:
 - `HUD Lobby Button Background URL`
 - `Lobby Background URL`
 - `Admin Background URL`
+
+Example:
+
+```json
+{
+  "HUD Scoreboard Background URL": "https://example.com/scoreboard.png",
+  "HUD Lobby Button Background URL": "https://example.com/lobby-button.png",
+  "Lobby Background URL": "https://example.com/lobby.png",
+  "Admin Background URL": "https://example.com/admin.png"
+}
+```
 
 ## Admin Setup
 
