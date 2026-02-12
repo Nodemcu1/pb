@@ -20,6 +20,8 @@ namespace Oxide.Plugins
         private const int MatchCountdownSeconds = 10;
         private const int ScoreLimit = 5;
         private const float RoundResetDelay = 3f;
+        private const string PaintballGunShortname = "paintballgun";
+        private const string PaintballAmmoShortname = "ammo.paintball";
 
         private ConfigData config;
         private readonly Dictionary<ulong, TeamSide> playerSides = new Dictionary<ulong, TeamSide>();
@@ -1213,18 +1215,7 @@ namespace Oxide.Plugins
 
             if (scoreA >= ScoreLimit || scoreB >= ScoreLimit)
             {
-                if (scoreA >= ScoreLimit && scoreB >= ScoreLimit)
-                {
-                    EndMatch(TeamSide.None);
-                }
-                else if (scoreA >= ScoreLimit)
-                {
-                    EndMatch(TeamSide.A);
-                }
-                else
-                {
-                    EndMatch(TeamSide.B);
-                }
+                EndMatch(scoreA >= ScoreLimit ? TeamSide.A : TeamSide.B);
                 return;
             }
 
@@ -1234,13 +1225,13 @@ namespace Oxide.Plugins
         private bool IsPaintballHit(HitInfo info)
         {
             var weaponItem = info.Weapon?.GetItem();
-            if (weaponItem != null && weaponItem.info.shortname == "paintballgun")
+            if (weaponItem != null && weaponItem.info.shortname == PaintballGunShortname)
             {
                 return true;
             }
 
             var ammoType = info.AmmoType?.shortname;
-            return ammoType == "ammo.paintball";
+            return ammoType == PaintballAmmoShortname;
         }
 
         private TeamSide ParseWinner(string[] args)
@@ -1363,8 +1354,8 @@ namespace Oxide.Plugins
 
             player.inventory.Strip();
             GiveItem(player, "paintballoveralls.suit", 1, player.inventory.containerWear);
-            GiveItem(player, "paintballgun", 1, player.inventory.containerBelt);
-            GiveItem(player, "ammo.paintball", PaintballAmmoAmount, player.inventory.containerMain);
+            GiveItem(player, PaintballGunShortname, 1, player.inventory.containerBelt);
+            GiveItem(player, PaintballAmmoShortname, PaintballAmmoAmount, player.inventory.containerMain);
             player.health = player.MaxHealth();
             player.SendNetworkUpdateImmediate();
         }
