@@ -1150,7 +1150,7 @@ namespace Oxide.Plugins
         private void BeginMatch()
         {
             matchState = MatchState.Live;
-            Broadcast("Paintball match is live! First to five.");
+            Broadcast($"Paintball match is live! First to {ScoreLimit}.");
             StartRound();
             TeleportQueuedPlayersToSpectator();
         }
@@ -1211,7 +1211,7 @@ namespace Oxide.Plugins
             }
 
             RefreshHudForAll();
-            Broadcast($"{attackerName} hit {victimName}. Side {scoringSide} scores!");
+            Broadcast($"{attackerName} hit {victimName}. {SideLabel(scoringSide)} scores!");
 
             if (scoreA >= ScoreLimit || scoreB >= ScoreLimit)
             {
@@ -1231,11 +1231,6 @@ namespace Oxide.Plugins
             }
 
             var ammoType = info.AmmoType?.shortname;
-            if (string.IsNullOrEmpty(ammoType))
-            {
-                return false;
-            }
-
             return ammoType == PaintballAmmoShortname;
         }
 
@@ -1396,6 +1391,11 @@ namespace Oxide.Plugins
             }
 
             return spawns[UnityEngine.Random.Range(0, spawns.Count)];
+        }
+
+        private string SideLabel(TeamSide side)
+        {
+            return side == TeamSide.A ? "Side A" : "Side B";
         }
 
         private void TeleportToSpawn(BasePlayer player, SpawnPoint spawn)
