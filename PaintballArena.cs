@@ -20,7 +20,7 @@ namespace Oxide.Plugins
         private const string HudScoreUiName = "PaintballArena.HUD.Scoreboard";
         private const string HudLobbyUiName = "PaintballArena.HUD.LobbyButton";
         private const string LobbyUiName = "PaintballArena.LobbyUI";
-        private const string HudScoreAnchorMin = "0.3 0.9";
+        private const string HudScoreAnchorMin = "0.3 0.88";
         private const string HudScoreAnchorMax = "0.7 0.99";
         private const string HudScoreImageName = "PaintballArena.HUD.Scoreboard.Background";
         private const string HudLobbyImageName = "PaintballArena.HUD.Lobby.Background";
@@ -861,7 +861,7 @@ namespace Oxide.Plugins
             }
 
             AddLabel(container, lobbyPanel, "Paintball Lobby", "0.3 0.86", "0.7 0.93", 24);
-            AddLabel(container, lobbyPanel, LobbyInfoText(), "0.2 0.68", "0.8 0.85", 14);
+            AddLabel(container, lobbyPanel, LobbyInfoText(), "0.2 0.62", "0.8 0.85", 13);
 
             AddButton(container, lobbyPanel, $"Join Side A ({themeA.Name})", "paintballarena.joina", "0.35 0.52", "0.65 0.6", themeA.Color);
             AddButton(container, lobbyPanel, $"Join Side B ({themeB.Name})", "paintballarena.joinb", "0.35 0.43", "0.65 0.51", themeB.Color);
@@ -1566,7 +1566,7 @@ namespace Oxide.Plugins
             var result = ImageLibrary.Call("AddImage", url, name);
             if (result == null)
             {
-                PrintWarning($"Failed to add image '{name}' from URL '{url}'. Check the ImageLibrary URL.");
+                PrintWarning($"Failed to add image '{name}' from URL '{url}'. Check the ImageLibrary plugin and URL.");
             }
         }
 
