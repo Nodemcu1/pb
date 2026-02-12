@@ -1213,7 +1213,18 @@ namespace Oxide.Plugins
 
             if (scoreA >= ScoreLimit || scoreB >= ScoreLimit)
             {
-                EndMatch(scoreA >= ScoreLimit ? TeamSide.A : TeamSide.B);
+                if (scoreA >= ScoreLimit && scoreB >= ScoreLimit)
+                {
+                    EndMatch(TeamSide.None);
+                }
+                else if (scoreA >= ScoreLimit)
+                {
+                    EndMatch(TeamSide.A);
+                }
+                else
+                {
+                    EndMatch(TeamSide.B);
+                }
                 return;
             }
 
