@@ -19,7 +19,7 @@ namespace Oxide.Plugins
         private const int PaintballAmmoAmount = 200;
         private const int MatchCountdownSeconds = 10;
         private const int ScoreLimit = 5;
-        private const float RoundResetDelay = 3f;
+        private const int RoundResetDelaySeconds = 3;
         private const string PaintballGunShortname = "paintballgun";
         private const string PaintballAmmoShortname = "ammo.paintball";
 
@@ -1219,10 +1219,9 @@ namespace Oxide.Plugins
                 return;
             }
 
-            var delaySeconds = Mathf.RoundToInt(RoundResetDelay);
-            var suffix = delaySeconds == 1 ? "second" : "seconds";
-            Broadcast($"Next round in {delaySeconds} {suffix}.");
-            timer.Once(RoundResetDelay, StartRound);
+            var suffix = RoundResetDelaySeconds == 1 ? "second" : "seconds";
+            Broadcast($"Next round in {RoundResetDelaySeconds} {suffix}.");
+            timer.Once(RoundResetDelaySeconds, StartRound);
         }
 
         private bool IsPaintballHit(HitInfo info)
