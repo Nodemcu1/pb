@@ -12,8 +12,29 @@ namespace Oxide.Plugins
     {
         private const string AdminPermission = "paintballarena.admin";
         private const string AdminUiName = "PaintballArena.AdminUI";
+        private const string HudUiName = "PaintballArena.HUD";
+        private const string LobbyUiName = "PaintballArena.LobbyUI";
 
         private ConfigData config;
+        private readonly Dictionary<ulong, TeamSide> playerSides = new Dictionary<ulong, TeamSide>();
+        private readonly List<TeamTheme> teamThemes = new List<TeamTheme>
+        {
+            new TeamTheme("Orange", "1 0.5 0 0.9"),
+            new TeamTheme("Green", "0.2 0.8 0.2 0.9"),
+            new TeamTheme("Yellow", "0.9 0.85 0.1 0.9"),
+            new TeamTheme("Blue", "0.2 0.5 0.9 0.9"),
+            new TeamTheme("Purple", "0.6 0.3 0.8 0.9")
+        };
+        private int themeIndex = -1;
+        private int scoreA;
+        private int scoreB;
+
+        private enum TeamSide
+        {
+            None,
+            A,
+            B
+        }
 
         private class ConfigData
         {
@@ -44,6 +65,18 @@ namespace Oxide.Plugins
             {
                 Position = position;
                 Rotation = rotation;
+            }
+        }
+
+        private class TeamTheme
+        {
+            public string Name { get; }
+            public string Color { get; }
+
+            public TeamTheme(string name, string color)
+            {
+                Name = name;
+                Color = color;
             }
         }
 
@@ -86,6 +119,29 @@ namespace Oxide.Plugins
             foreach (var player in BasePlayer.activePlayerList)
             {
                 DestroyAdminUi(player);
+                DestroyHud(player);
+                DestroyLobbyUi(player);
+            }
+        }
+
+        private void OnServerInitialized()
+        {
+            CycleTeamThemes();
+        }
+
+        private void OnPlayerInit(BasePlayer player)
+        {
+            ShowHud(player);
+        }
+
+        private void OnPlayerDisconnected(BasePlayer player, string reason)
+        {
+            DestroyAdminUi(player);
+            DestroyHud(player);
+            DestroyLobbyUi(player);
+            if (player != null)
+            {
+                playerSides.Remove(player.userID);
             }
         }
 
@@ -167,6 +223,24 @@ namespace Oxide.Plugins
             ClearTeamSpawns(player, config.TeamBSpawns, "Team B");
         }
 
+        [ChatCommand("pblobbyui")]
+        private void CmdOpenLobby(BasePlayer player, string command, string[] args)
+        {
+            OpenLobbyUi(player);
+        }
+
+        [ChatCommand("pbcycle")]
+        private void CmdCycleThemes(BasePlayer player, string command, string[] args)
+        {
+            if (!EnsureAdminPlayer(player))
+            {
+                return;
+            }
+
+            CycleTeamThemes();
+            SendReply(player, $"Next match themes: {CurrentThemeA().Name} vs {CurrentThemeB().Name}");
+        }
+
         [ConsoleCommand("paintballarena.openadmin")]
         private void ConsoleOpenAdmin(ConsoleSystem.Arg arg)
         {
@@ -189,6 +263,48 @@ namespace Oxide.Plugins
             }
 
             DestroyAdminUi(player);
+        }
+
+        [ConsoleCommand("paintballarena.openlobby")]
+        private void ConsoleOpenLobby(ConsoleSystem.Arg arg)
+        {
+            OpenLobbyUi(arg.Player());
+        }
+
+        [ConsoleCommand("paintballarena.closelobby")]
+        private void ConsoleCloseLobby(ConsoleSystem.Arg arg)
+        {
+            DestroyLobbyUi(arg.Player());
+        }
+
+        [ConsoleCommand("paintballarena.joina")]
+        private void ConsoleJoinA(ConsoleSystem.Arg arg)
+        {
+            SetPlayerSide(arg.Player(), TeamSide.A);
+        }
+
+        [ConsoleCommand("paintballarena.joinb")]
+        private void ConsoleJoinB(ConsoleSystem.Arg arg)
+        {
+            SetPlayerSide(arg.Player(), TeamSide.B);
+        }
+
+        [ConsoleCommand("paintballarena.leave")]
+        private void ConsoleLeave(ConsoleSystem.Arg arg)
+        {
+            SetPlayerSide(arg.Player(), TeamSide.None);
+        }
+
+        [ConsoleCommand("paintballarena.cyclethemes")]
+        private void ConsoleCycleThemes(ConsoleSystem.Arg arg)
+        {
+            var player = arg.Player();
+            if (player != null && !EnsureAdminPlayer(player))
+            {
+                return;
+            }
+
+            CycleTeamThemes();
         }
 
         [ConsoleCommand("paintballarena.setlobby")]
@@ -321,6 +437,156 @@ namespace Oxide.Plugins
             var position = player.transform.position;
             var rotation = player.transform.rotation.eulerAngles;
             return new SpawnPoint(position, rotation);
+        }
+
+        private void CycleTeamThemes()
+        {
+            if (teamThemes.Count < 2)
+            {
+                PrintWarning("At least two team themes are required to cycle.");
+                return;
+            }
+
+            themeIndex = (themeIndex + 1) % teamThemes.Count;
+            scoreA = 0;
+            scoreB = 0;
+            RefreshHudForAll();
+        }
+
+        private void RefreshHudForAll()
+        {
+            foreach (var player in BasePlayer.activePlayerList)
+            {
+                ShowHud(player);
+            }
+        }
+
+        private TeamTheme CurrentThemeA()
+        {
+            EnsureThemeIndex();
+            return teamThemes[themeIndex];
+        }
+
+        private TeamTheme CurrentThemeB()
+        {
+            EnsureThemeIndex();
+            return teamThemes[(themeIndex + 1) % teamThemes.Count];
+        }
+
+        private void EnsureThemeIndex()
+        {
+            if (themeIndex < 0 && teamThemes.Count > 0)
+            {
+                themeIndex = 0;
+            }
+        }
+
+        private string ScoreboardText()
+        {
+            var themeA = CurrentThemeA();
+            var themeB = CurrentThemeB();
+            return $"{themeA.Name} {scoreA} - {scoreB} {themeB.Name}";
+        }
+
+        private void ShowHud(BasePlayer player)
+        {
+            if (player == null || teamThemes.Count < 2)
+            {
+                return;
+            }
+
+            DestroyHud(player);
+
+            var container = new CuiElementContainer();
+            container.Add(new CuiPanel
+            {
+                Image = { Color = "0 0 0 0" },
+                RectTransform = { AnchorMin = "0 0", AnchorMax = "1 1" }
+            }, "Overlay", HudUiName);
+
+            var scoreboard = container.Add(new CuiPanel
+            {
+                Image = { Color = "0.08 0.08 0.08 0.75" },
+                RectTransform = { AnchorMin = "0.35 0.95", AnchorMax = "0.65 0.99" }
+            }, HudUiName);
+
+            AddLabel(container, scoreboard, ScoreboardText(), "0 0", "1 1", 14);
+
+            AddButton(container, HudUiName, "Lobby", "paintballarena.openlobby", "0.9 0.945", "0.98 0.985", "0.2 0.2 0.2 0.85");
+
+            CuiHelper.AddUi(player, container);
+        }
+
+        private void DestroyHud(BasePlayer player)
+        {
+            if (player == null)
+            {
+                return;
+            }
+
+            CuiHelper.DestroyUi(player, HudUiName);
+        }
+
+        private void OpenLobbyUi(BasePlayer player)
+        {
+            if (player == null || teamThemes.Count < 2)
+            {
+                return;
+            }
+
+            DestroyLobbyUi(player);
+
+            var themeA = CurrentThemeA();
+            var themeB = CurrentThemeB();
+
+            var container = new CuiElementContainer();
+            container.Add(new CuiPanel
+            {
+                Image = { Color = "0 0 0 0.85" },
+                RectTransform = { AnchorMin = "0 0", AnchorMax = "1 1" },
+                CursorEnabled = true
+            }, "Overlay", LobbyUiName);
+
+            AddLabel(container, LobbyUiName, "Paintball Lobby", "0.3 0.85", "0.7 0.93", 24);
+            AddLabel(container, LobbyUiName, $"Current Match: {themeA.Name} vs {themeB.Name}", "0.3 0.78", "0.7 0.84", 16);
+
+            AddButton(container, LobbyUiName, $"Join Side A ({themeA.Name})", "paintballarena.joina", "0.35 0.55", "0.65 0.63", themeA.Color);
+            AddButton(container, LobbyUiName, $"Join Side B ({themeB.Name})", "paintballarena.joinb", "0.35 0.45", "0.65 0.53", themeB.Color);
+            AddButton(container, LobbyUiName, "Leave Match", "paintballarena.leave", "0.35 0.35", "0.65 0.43", "0.8 0.2 0.2 0.9");
+            AddButton(container, LobbyUiName, "Close", "paintballarena.closelobby", "0.35 0.25", "0.65 0.33", "0.2 0.2 0.2 0.9");
+
+            CuiHelper.AddUi(player, container);
+        }
+
+        private void DestroyLobbyUi(BasePlayer player)
+        {
+            if (player == null)
+            {
+                return;
+            }
+
+            CuiHelper.DestroyUi(player, LobbyUiName);
+        }
+
+        private void SetPlayerSide(BasePlayer player, TeamSide side)
+        {
+            if (player == null)
+            {
+                return;
+            }
+
+            if (side == TeamSide.None)
+            {
+                playerSides.Remove(player.userID);
+                SendReply(player, "You have left the match queue.");
+                DestroyLobbyUi(player);
+                return;
+            }
+
+            playerSides[player.userID] = side;
+            var theme = side == TeamSide.A ? CurrentThemeA() : CurrentThemeB();
+            SendReply(player, $"You joined Side {side} ({theme.Name}).");
+            DestroyLobbyUi(player);
         }
 
         private void OpenAdminUi(BasePlayer player)
