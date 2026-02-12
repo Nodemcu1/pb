@@ -1133,7 +1133,18 @@ namespace Oxide.Plugins
                 return;
             }
 
-            foreach (var userId in savedInventories.Keys)
+            var userIds = new HashSet<ulong>(playerSides.Keys);
+            foreach (var userId in queueSideA)
+            {
+                userIds.Add(userId);
+            }
+
+            foreach (var userId in queueSideB)
+            {
+                userIds.Add(userId);
+            }
+
+            foreach (var userId in userIds)
             {
                 var player = BasePlayer.FindByID(userId);
                 if (player == null)
