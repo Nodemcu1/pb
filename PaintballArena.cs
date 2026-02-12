@@ -14,6 +14,8 @@ namespace Oxide.Plugins
         private const string AdminPermission = "paintballarena.admin";
         private const string AdminUiName = "PaintballArena.AdminUI";
         private const string HudUiName = "PaintballArena.HUD";
+        private const string HudScoreUiName = "PaintballArena.HUD.Scoreboard";
+        private const string HudLobbyUiName = "PaintballArena.HUD.LobbyButton";
         private const string LobbyUiName = "PaintballArena.LobbyUI";
         private const int MaxPlayersPerSide = 6;
         private const int PaintballAmmoAmount = 200;
@@ -724,21 +726,20 @@ namespace Oxide.Plugins
             DestroyHud(player);
 
             var container = new CuiElementContainer();
-            container.Add(new CuiPanel
-            {
-                Image = { Color = "0 0 0 0" },
-                RectTransform = { AnchorMin = "0 0", AnchorMax = "1 1" }
-            }, "Hud", HudUiName);
-
             var scoreboard = container.Add(new CuiPanel
             {
                 Image = { Color = "0.08 0.08 0.08 0.75" },
                 RectTransform = { AnchorMin = "0.35 0.95", AnchorMax = "0.65 0.99" }
-            }, HudUiName);
+            }, "Hud", HudScoreUiName);
 
             AddLabel(container, scoreboard, ScoreboardText(), "0 0", "1 1", 14);
 
-            AddButton(container, HudUiName, "Lobby", "paintballarena.openlobby", "0.9 0.945", "0.98 0.985", "0.2 0.2 0.2 0.85");
+            container.Add(new CuiButton
+            {
+                Button = { Color = "0.2 0.2 0.2 0.85", Command = "paintballarena.openlobby" },
+                RectTransform = { AnchorMin = "0.9 0.945", AnchorMax = "0.98 0.985" },
+                Text = { Text = "Lobby", FontSize = 14, Align = TextAnchor.MiddleCenter, Color = "1 1 1 0.95" }
+            }, "Hud", HudLobbyUiName);
 
             CuiHelper.AddUi(player, container);
         }
@@ -750,6 +751,8 @@ namespace Oxide.Plugins
                 return;
             }
 
+            CuiHelper.DestroyUi(player, HudScoreUiName);
+            CuiHelper.DestroyUi(player, HudLobbyUiName);
             CuiHelper.DestroyUi(player, HudUiName);
         }
 
