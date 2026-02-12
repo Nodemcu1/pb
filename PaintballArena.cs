@@ -1219,7 +1219,9 @@ namespace Oxide.Plugins
                 return;
             }
 
-            Broadcast($"Next round in {RoundResetDelay:0} seconds.");
+            var delaySeconds = Mathf.RoundToInt(RoundResetDelay);
+            var suffix = delaySeconds == 1 ? "second" : "seconds";
+            Broadcast($"Next round in {delaySeconds} {suffix}.");
             timer.Once(RoundResetDelay, StartRound);
         }
 
@@ -1232,6 +1234,11 @@ namespace Oxide.Plugins
             }
 
             var ammoType = info.AmmoType?.shortname;
+            if (string.IsNullOrEmpty(ammoType))
+            {
+                return false;
+            }
+
             return weaponItem.info.shortname == PaintballGunShortname && ammoType == PaintballAmmoShortname;
         }
 
