@@ -66,6 +66,9 @@ namespace Oxide.Plugins
 
             [JsonProperty("Team B Spawns")]
             public List<SpawnPoint> TeamBSpawns = new List<SpawnPoint>();
+
+            [JsonProperty("Auto Start Enabled")]
+            public bool AutoStartEnabled;
         }
 
         private class SpawnPoint
@@ -308,7 +311,31 @@ namespace Oxide.Plugins
                 return;
             }
 
-            StartMatchCountdown(player);
+            StartMatchCountdown(player, false);
+        }
+
+        [ChatCommand("pbforcestart")]
+        private void CmdForceStart(BasePlayer player, string command, string[] args)
+        {
+            if (!EnsureAdminPlayer(player))
+            {
+                return;
+            }
+
+            StartMatchCountdown(player, true);
+        }
+
+        [ChatCommand("pbautostart")]
+        private void CmdToggleAutoStart(BasePlayer player, string command, string[] args)
+        {
+            if (!EnsureAdminPlayer(player))
+            {
+                return;
+            }
+
+            config.AutoStartEnabled = !config.AutoStartEnabled;
+            SaveConfig();
+            SendReply(player, $"Auto start is now {(config.AutoStartEnabled ? "enabled" : "disabled")}.");
         }
 
         [ChatCommand("pbend")]
@@ -432,7 +459,33 @@ namespace Oxide.Plugins
                 return;
             }
 
-            StartMatchCountdown(player);
+            StartMatchCountdown(player, false);
+        }
+
+        [ConsoleCommand("paintballarena.forcestart")]
+        private void ConsoleForceStart(ConsoleSystem.Arg arg)
+        {
+            var player = arg.Player();
+            if (player != null && !EnsureAdminPlayer(player))
+            {
+                return;
+            }
+
+            StartMatchCountdown(player, true);
+        }
+
+        [ConsoleCommand("paintballarena.autostart")]
+        private void ConsoleToggleAutoStart(ConsoleSystem.Arg arg)
+        {
+            var player = arg.Player();
+            if (player != null && !EnsureAdminPlayer(player))
+            {
+                return;
+            }
+
+            config.AutoStartEnabled = !config.AutoStartEnabled;
+            SaveConfig();
+            Reply(player, $"Auto start is now {(config.AutoStartEnabled ? "enabled" : "disabled")}.");
         }
 
         [ConsoleCommand("paintballarena.end")]
@@ -742,6 +795,7 @@ namespace Oxide.Plugins
             var theme = side == TeamSide.A ? CurrentThemeA() : CurrentThemeB();
             SendReply(player, $"You joined Side {side} ({theme.Name}).");
             DestroyLobbyUi(player);
+            TryAutoStart();
         }
 
         private TeamSide GetPlayerSide(ulong userId)
@@ -854,6 +908,8 @@ namespace Oxide.Plugins
                 SendReply(player, $"A slot opened. You joined Side {side} ({theme.Name}).");
                 ShowHud(player);
             }
+
+            TryAutoStart();
         }
 
         private void SaveInventoryIfNeeded(BasePlayer player)
@@ -987,7 +1043,7 @@ namespace Oxide.Plugins
             }
         }
 
-        private void StartMatchCountdown(BasePlayer starter)
+        private void StartMatchCountdown(BasePlayer starter, bool forceStart)
         {
             if (matchState != MatchState.Lobby)
             {
@@ -1001,7 +1057,14 @@ namespace Oxide.Plugins
                 return;
             }
 
-            if (GetSideCount(TeamSide.A) == 0 || GetSideCount(TeamSide.B) == 0)
+            var totalPlayers = GetSideCount(TeamSide.A) + GetSideCount(TeamSide.B);
+            if (totalPlayers == 0)
+            {
+                Reply(starter, "At least one player must join a team to start.");
+                return;
+            }
+
+            if (!forceStart && (GetSideCount(TeamSide.A) == 0 || GetSideCount(TeamSide.B) == 0))
             {
                 Reply(starter, "Both teams need at least one player to start.");
                 return;
@@ -1024,6 +1087,21 @@ namespace Oxide.Plugins
 
                 Broadcast($"Match starts in {countdownRemaining}...");
             });
+        }
+
+        private void TryAutoStart()
+        {
+            if (!config.AutoStartEnabled || matchState != MatchState.Lobby)
+            {
+                return;
+            }
+
+            if (GetSideCount(TeamSide.A) == 0 || GetSideCount(TeamSide.B) == 0)
+            {
+                return;
+            }
+
+            StartMatchCountdown(null, false);
         }
 
         private void BeginMatch()

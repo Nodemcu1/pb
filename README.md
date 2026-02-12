@@ -36,4 +36,6 @@ Then choose **Join Side A**, **Join Side B**, or **Leave Match** from the lobby 
 - `/pblobbyui` - Open the lobby UI.
 - `/pbcycle` - Cycle the active team themes (admin only).
 - `/pbstart` - Start a match countdown (admin only).
+- `/pbforcestart` - Force start the match countdown even if only one side has players (admin only).
+- `/pbautostart` - Toggle auto-start when both sides have players (admin only).
 - `/pbend [a|b]` - End the match and declare a winner (admin only, omit for draw).
