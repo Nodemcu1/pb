@@ -14,9 +14,12 @@ namespace Oxide.Plugins
         private const string AdminUiName = "PaintballArena.AdminUI";
         private const string HudUiName = "PaintballArena.HUD";
         private const string LobbyUiName = "PaintballArena.LobbyUI";
+        private const int MaxPlayersPerSide = 6;
 
         private ConfigData config;
         private readonly Dictionary<ulong, TeamSide> playerSides = new Dictionary<ulong, TeamSide>();
+        private readonly List<ulong> queueSideA = new List<ulong>();
+        private readonly List<ulong> queueSideB = new List<ulong>();
         private readonly List<TeamTheme> teamThemes = new List<TeamTheme>
         {
             new TeamTheme("Orange", "1 0.5 0 0.9"),
@@ -139,7 +142,7 @@ namespace Oxide.Plugins
             DestroyAdminUi(player);
             DestroyHud(player);
             DestroyLobbyUi(player);
-            playerSides.Remove(player.userID);
+            RemovePlayerFromSideAndQueue(player);
         }
 
         [ChatCommand("pbadmin")]
@@ -524,7 +527,7 @@ namespace Oxide.Plugins
             {
                 Image = { Color = "0 0 0 0" },
                 RectTransform = { AnchorMin = "0 0", AnchorMax = "1 1" }
-            }, "Overlay", HudUiName);
+            }, "Hud", HudUiName);
 
             var scoreboard = container.Add(new CuiPanel
             {
@@ -599,8 +602,31 @@ namespace Oxide.Plugins
 
             if (side == TeamSide.None)
             {
-                playerSides.Remove(player.userID);
+                RemovePlayerFromSideAndQueue(player);
                 SendReply(player, "You have left the match queue.");
+                DestroyLobbyUi(player);
+                return;
+            }
+
+            if (GetPlayerSide(player.userID) == side)
+            {
+                SendReply(player, $"You are already on Side {side}.");
+                DestroyLobbyUi(player);
+                return;
+            }
+
+            if (IsQueuedForSide(player.userID, side))
+            {
+                SendReply(player, $"You are already waiting for Side {side}.");
+                DestroyLobbyUi(player);
+                return;
+            }
+
+            RemovePlayerFromSideAndQueue(player);
+
+            if (IsSideFull(side))
+            {
+                QueuePlayer(player, side);
                 DestroyLobbyUi(player);
                 return;
             }
@@ -609,6 +635,112 @@ namespace Oxide.Plugins
             var theme = side == TeamSide.A ? CurrentThemeA() : CurrentThemeB();
             SendReply(player, $"You joined Side {side} ({theme.Name}).");
             DestroyLobbyUi(player);
+        }
+
+        private TeamSide GetPlayerSide(ulong userId)
+        {
+            TeamSide side;
+            return playerSides.TryGetValue(userId, out side) ? side : TeamSide.None;
+        }
+
+        private void RemovePlayerFromSideAndQueue(BasePlayer player)
+        {
+            if (player == null)
+            {
+                return;
+            }
+
+            var previousSide = RemovePlayerFromSide(player.userID);
+            RemoveFromQueues(player.userID);
+            TryPromoteQueuedPlayers(previousSide);
+        }
+
+        private TeamSide RemovePlayerFromSide(ulong userId)
+        {
+            TeamSide side;
+            if (playerSides.TryGetValue(userId, out side))
+            {
+                playerSides.Remove(userId);
+                return side;
+            }
+
+            return TeamSide.None;
+        }
+
+        private void RemoveFromQueues(ulong userId)
+        {
+            queueSideA.Remove(userId);
+            queueSideB.Remove(userId);
+        }
+
+        private bool IsSideFull(TeamSide side)
+        {
+            return GetSideCount(side) >= MaxPlayersPerSide;
+        }
+
+        private int GetSideCount(TeamSide side)
+        {
+            var count = 0;
+            foreach (var entry in playerSides)
+            {
+                if (entry.Value == side)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private void QueuePlayer(BasePlayer player, TeamSide side)
+        {
+            if (player == null || side == TeamSide.None)
+            {
+                return;
+            }
+
+            RemoveFromQueues(player.userID);
+            var queue = GetQueue(side);
+            if (!queue.Contains(player.userID))
+            {
+                queue.Add(player.userID);
+            }
+
+            SendReply(player, $"Side {side} is full. You are in the waiting queue (#{queue.Count}).");
+        }
+
+        private bool IsQueuedForSide(ulong userId, TeamSide side)
+        {
+            return GetQueue(side).Contains(userId);
+        }
+
+        private List<ulong> GetQueue(TeamSide side)
+        {
+            return side == TeamSide.A ? queueSideA : queueSideB;
+        }
+
+        private void TryPromoteQueuedPlayers(TeamSide side)
+        {
+            if (side == TeamSide.None)
+            {
+                return;
+            }
+
+            var queue = GetQueue(side);
+            while (queue.Count > 0 && !IsSideFull(side))
+            {
+                var userId = queue[0];
+                queue.RemoveAt(0);
+                var player = BasePlayer.FindByID(userId);
+                if (player == null)
+                {
+                    continue;
+                }
+
+                playerSides[userId] = side;
+                var theme = side == TeamSide.A ? CurrentThemeA() : CurrentThemeB();
+                SendReply(player, $"A slot opened. You joined Side {side} ({theme.Name}).");
+            }
         }
 
         private void OpenAdminUi(BasePlayer player)

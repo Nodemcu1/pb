@@ -1,6 +1,6 @@
-# Paintball Arena (Phase 2)
+# Paintball Arena (Phase 3)
 
-Foundation plugin for a Rust paintball arena minigame. Phase 1 covers configuration and admin setup. Phase 2 adds the HUD, lobby UI, and team theme cycling.
+Foundation plugin for a Rust paintball arena minigame. Phase 1 covers configuration and admin setup. Phase 2 adds the HUD, lobby UI, and team theme cycling. Phase 3 adds team caps and waiting queues.
 
 ## Admin Setup
 
