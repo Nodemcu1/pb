@@ -1231,13 +1231,7 @@ namespace Oxide.Plugins
                 return false;
             }
 
-            var ammoType = info.AmmoType?.shortname;
-            if (string.IsNullOrEmpty(ammoType))
-            {
-                return false;
-            }
-
-            return weaponItem.info.shortname == PaintballGunShortname && ammoType == PaintballAmmoShortname;
+            return weaponItem.info.shortname == PaintballGunShortname;
         }
 
         private TeamSide ParseWinner(string[] args)
