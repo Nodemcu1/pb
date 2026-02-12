@@ -1104,7 +1104,7 @@ namespace Oxide.Plugins
                 return;
             }
 
-            player.Teleport(spawn.Position);
+            TeleportToSpawn(player, spawn);
         }
 
         private void TeleportQueuedPlayersToSpectator()
@@ -1122,7 +1122,7 @@ namespace Oxide.Plugins
                     continue;
                 }
 
-                player.Teleport(config.SpectatorSpawn.Position);
+                TeleportToSpawn(player, config.SpectatorSpawn);
             }
         }
 
@@ -1152,7 +1152,7 @@ namespace Oxide.Plugins
                     continue;
                 }
 
-                player.Teleport(config.LobbySpawn.Position);
+                TeleportToSpawn(player, config.LobbySpawn);
             }
         }
 
@@ -1215,6 +1215,18 @@ namespace Oxide.Plugins
             }
 
             return spawns[UnityEngine.Random.Range(0, spawns.Count)];
+        }
+
+        private void TeleportToSpawn(BasePlayer player, SpawnPoint spawn)
+        {
+            if (player == null || spawn == null)
+            {
+                return;
+            }
+
+            player.Teleport(spawn.Position);
+            player.transform.rotation = Quaternion.Euler(spawn.Rotation);
+            player.SendNetworkUpdateImmediate();
         }
 
         private void Broadcast(string message)
