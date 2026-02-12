@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json;
 using Oxide.Core;
 using Oxide.Game.Rust.Cui;
@@ -678,27 +679,22 @@ namespace Oxide.Plugins
 
         private int GetSideCount(TeamSide side)
         {
-            var count = 0;
-            foreach (var entry in playerSides)
-            {
-                if (entry.Value == side)
-                {
-                    count++;
-                }
-            }
-
-            return count;
+            return playerSides.Count(entry => entry.Value == side);
         }
 
         private void QueuePlayer(BasePlayer player, TeamSide side)
         {
-            if (player == null || side == TeamSide.None)
+            if (player == null)
             {
                 return;
             }
 
             RemoveFromQueues(player.userID);
             var queue = GetQueue(side);
+            if (queue == null)
+            {
+                return;
+            }
             if (!queue.Contains(player.userID))
             {
                 queue.Add(player.userID);
@@ -709,7 +705,8 @@ namespace Oxide.Plugins
 
         private bool IsQueuedForSide(ulong userId, TeamSide side)
         {
-            return GetQueue(side).Contains(userId);
+            var queue = GetQueue(side);
+            return queue != null && queue.Contains(userId);
         }
 
         private List<ulong> GetQueue(TeamSide side)
@@ -724,7 +721,7 @@ namespace Oxide.Plugins
                 return queueSideB;
             }
 
-            return new List<ulong>();
+            return null;
         }
 
         private void TryPromoteQueuedPlayers(TeamSide side)
@@ -735,6 +732,10 @@ namespace Oxide.Plugins
             }
 
             var queue = GetQueue(side);
+            if (queue == null)
+            {
+                return;
+            }
             while (queue.Count > 0 && !IsSideFull(side))
             {
                 var userId = queue[0];
