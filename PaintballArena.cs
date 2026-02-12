@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
 using Oxide.Core;
+using Oxide.Core.Plugins;
 using Oxide.Game.Rust.Cui;
 using UnityEngine;
 
@@ -11,12 +12,19 @@ namespace Oxide.Plugins
     [Description("UI-driven paintball arena foundation and admin setup.")]
     public class PaintballArena : RustPlugin
     {
+        [PluginReference]
+        private Plugin ImageLibrary;
+
         private const string AdminPermission = "paintballarena.admin";
         private const string AdminUiName = "PaintballArena.AdminUI";
         private const string HudUiName = "PaintballArena.HUD";
         private const string HudScoreUiName = "PaintballArena.HUD.Scoreboard";
         private const string HudLobbyUiName = "PaintballArena.HUD.LobbyButton";
         private const string LobbyUiName = "PaintballArena.LobbyUI";
+        private const string HudScoreImageName = "PaintballArena.HUD.Scoreboard.Background";
+        private const string HudLobbyImageName = "PaintballArena.HUD.Lobby.Background";
+        private const string LobbyBackgroundImageName = "PaintballArena.Lobby.Background";
+        private const string AdminBackgroundImageName = "PaintballArena.Admin.Background";
         private const int MaxPlayersPerSide = 6;
         private const int PaintballAmmoAmount = 200;
         private const int MatchCountdownSeconds = 10;
@@ -76,6 +84,18 @@ namespace Oxide.Plugins
 
             [JsonProperty("Auto Start Enabled")]
             public bool AutoStartEnabled;
+
+            [JsonProperty("HUD Scoreboard Background URL")]
+            public string HudScoreboardBackgroundUrl;
+
+            [JsonProperty("HUD Lobby Button Background URL")]
+            public string HudLobbyButtonBackgroundUrl;
+
+            [JsonProperty("Lobby Background URL")]
+            public string LobbyBackgroundUrl;
+
+            [JsonProperty("Admin Background URL")]
+            public string AdminBackgroundUrl;
         }
 
         private class SpawnPoint
@@ -172,6 +192,7 @@ namespace Oxide.Plugins
 
         private void OnServerInitialized()
         {
+            LoadImages();
             RefreshHudForAll();
         }
 
@@ -713,7 +734,30 @@ namespace Oxide.Plugins
         {
             var themeA = CurrentThemeA();
             var themeB = CurrentThemeB();
-            return $"{themeA.Name} {scoreA} - {scoreB} {themeB.Name}";
+            var status = MatchStatusLabel();
+            var counts = $"A {GetSideCount(TeamSide.A)}/{MaxPlayersPerSide} | B {GetSideCount(TeamSide.B)}/{MaxPlayersPerSide}";
+            return $"{themeA.Name} {scoreA} - {scoreB} {themeB.Name}\n{MatchRuleLabel()} {status}\n{counts}";
+        }
+
+        private string LobbyInfoText()
+        {
+            var themeA = CurrentThemeA();
+            var themeB = CurrentThemeB();
+            var status = MatchStatusLabel();
+            var autoStart = config.AutoStartEnabled ? "On" : "Off";
+            var sideA = $"{GetSideCount(TeamSide.A)}/{MaxPlayersPerSide} (Queue {queueSideA.Count})";
+            var sideB = $"{GetSideCount(TeamSide.B)}/{MaxPlayersPerSide} (Queue {queueSideB.Count})";
+            return $"{themeA.Name} vs {themeB.Name}\nScore: {scoreA} - {scoreB} ({MatchRuleLabel()})\nState: {status} | Auto Start: {autoStart}\nSide A: {sideA}\nSide B: {sideB}";
+        }
+
+        private string MatchStatusLabel()
+        {
+            if (matchState == MatchState.Countdown)
+            {
+                return $"Countdown {countdownRemaining}s";
+            }
+
+            return matchState == MatchState.Live ? "Live" : "Lobby";
         }
 
         private void ShowHud(BasePlayer player)
@@ -726,20 +770,38 @@ namespace Oxide.Plugins
             DestroyHud(player);
 
             var container = new CuiElementContainer();
+            var scoreboardHasImage = HasImage(HudScoreImageName);
             var scoreboard = container.Add(new CuiPanel
             {
-                Image = { Color = "0.08 0.08 0.08 0.75" },
-                RectTransform = { AnchorMin = "0.35 0.95", AnchorMax = "0.65 0.99" }
+                Image = { Color = scoreboardHasImage ? "0 0 0 0" : "0.08 0.08 0.08 0.75" },
+                RectTransform = { AnchorMin = "0.3 0.93", AnchorMax = "0.7 0.99" }
             }, "Hud", HudScoreUiName);
 
-            AddLabel(container, scoreboard, ScoreboardText(), "0 0", "1 1", 14);
+            if (scoreboardHasImage)
+            {
+                AddBackgroundImage(container, scoreboard, HudScoreImageName);
+            }
+
+            AddLabel(container, scoreboard, ScoreboardText(), "0 0", "1 1", 12);
+
+            var lobbyButtonHasImage = HasImage(HudLobbyImageName);
+            var lobbyButtonPanel = container.Add(new CuiPanel
+            {
+                Image = { Color = lobbyButtonHasImage ? "0 0 0 0" : "0.2 0.2 0.2 0.85" },
+                RectTransform = { AnchorMin = "0.9 0.94", AnchorMax = "0.98 0.985" }
+            }, "Hud", HudLobbyUiName);
+
+            if (lobbyButtonHasImage)
+            {
+                AddBackgroundImage(container, lobbyButtonPanel, HudLobbyImageName);
+            }
 
             container.Add(new CuiButton
             {
-                Button = { Color = "0.2 0.2 0.2 0.85", Command = "paintballarena.openlobby" },
-                RectTransform = { AnchorMin = "0.9 0.945", AnchorMax = "0.98 0.985" },
-                Text = { Text = "Lobby", FontSize = 14, Align = TextAnchor.MiddleCenter, Color = "1 1 1 0.95" }
-            }, "Hud", HudLobbyUiName);
+                Button = { Color = "0 0 0 0", Command = "paintballarena.openlobby" },
+                RectTransform = { AnchorMin = "0 0", AnchorMax = "1 1" },
+                Text = { Text = "Lobby", FontSize = 12, Align = TextAnchor.MiddleCenter, Color = "1 1 1 0.95" }
+            }, lobbyButtonPanel);
 
             CuiHelper.AddUi(player, container);
         }
@@ -769,20 +831,26 @@ namespace Oxide.Plugins
             var themeB = CurrentThemeB();
 
             var container = new CuiElementContainer();
-            container.Add(new CuiPanel
+            var lobbyHasImage = HasImage(LobbyBackgroundImageName);
+            var lobbyPanel = container.Add(new CuiPanel
             {
-                Image = { Color = "0 0 0 0.85" },
+                Image = { Color = lobbyHasImage ? "0 0 0 0.75" : "0 0 0 0.85" },
                 RectTransform = { AnchorMin = "0 0", AnchorMax = "1 1" },
                 CursorEnabled = true
             }, "Overlay", LobbyUiName);
 
-            AddLabel(container, LobbyUiName, "Paintball Lobby", "0.3 0.85", "0.7 0.93", 24);
-            AddLabel(container, LobbyUiName, $"Current Match: {themeA.Name} vs {themeB.Name}", "0.3 0.78", "0.7 0.84", 16);
+            if (lobbyHasImage)
+            {
+                AddBackgroundImage(container, lobbyPanel, LobbyBackgroundImageName);
+            }
 
-            AddButton(container, LobbyUiName, $"Join Side A ({themeA.Name})", "paintballarena.joina", "0.35 0.55", "0.65 0.63", themeA.Color);
-            AddButton(container, LobbyUiName, $"Join Side B ({themeB.Name})", "paintballarena.joinb", "0.35 0.45", "0.65 0.53", themeB.Color);
-            AddButton(container, LobbyUiName, "Leave Match", "paintballarena.leave", "0.35 0.35", "0.65 0.43", "0.8 0.2 0.2 0.9");
-            AddButton(container, LobbyUiName, "Close", "paintballarena.closelobby", "0.35 0.25", "0.65 0.33", "0.2 0.2 0.2 0.9");
+            AddLabel(container, lobbyPanel, "Paintball Lobby", "0.3 0.86", "0.7 0.93", 24);
+            AddLabel(container, lobbyPanel, LobbyInfoText(), "0.2 0.68", "0.8 0.85", 14);
+
+            AddButton(container, lobbyPanel, $"Join Side A ({themeA.Name})", "paintballarena.joina", "0.35 0.52", "0.65 0.6", themeA.Color);
+            AddButton(container, lobbyPanel, $"Join Side B ({themeB.Name})", "paintballarena.joinb", "0.35 0.43", "0.65 0.51", themeB.Color);
+            AddButton(container, lobbyPanel, "Leave Match", "paintballarena.leave", "0.35 0.34", "0.65 0.42", "0.8 0.2 0.2 0.9");
+            AddButton(container, lobbyPanel, "Close", "paintballarena.closelobby", "0.35 0.25", "0.65 0.33", "0.2 0.2 0.2 0.9");
 
             CuiHelper.AddUi(player, container);
         }
@@ -1119,6 +1187,7 @@ namespace Oxide.Plugins
             matchState = MatchState.Countdown;
             countdownRemaining = MatchCountdownSeconds;
             Broadcast($"Paintball match starts in {countdownRemaining} seconds!");
+            RefreshHudForAll();
             countdownTimer?.Destroy();
             countdownTimer = timer.Repeat(1f, MatchCountdownSeconds, () =>
             {
@@ -1132,6 +1201,7 @@ namespace Oxide.Plugins
                 }
 
                 Broadcast($"Match starts in {countdownRemaining}...");
+                RefreshHudForAll();
             });
         }
 
@@ -1156,6 +1226,7 @@ namespace Oxide.Plugins
             Broadcast($"Paintball match is live! {MatchRuleLabel()}");
             StartRound();
             TeleportQueuedPlayersToSpectator();
+            RefreshHudForAll();
         }
 
         private void EndMatch(TeamSide winner, BasePlayer caller = null)
@@ -1173,7 +1244,7 @@ namespace Oxide.Plugins
 
             var message = winner == TeamSide.None
                 ? "Match ended in a draw."
-                : $"Match ended. Side {winner} wins!";
+                : $"Match ended. {SideLabel(winner)} wins!";
             Broadcast(message);
 
             TeleportAllToLobby();
@@ -1182,6 +1253,7 @@ namespace Oxide.Plugins
             queueSideA.Clear();
             queueSideB.Clear();
             CycleTeamThemes();
+            RefreshHudForAll();
         }
 
         private void StartRound()
@@ -1455,31 +1527,89 @@ namespace Oxide.Plugins
             SendReply(player, message);
         }
 
+        private void LoadImages()
+        {
+            if (ImageLibrary == null)
+            {
+                return;
+            }
+
+            AddImageIfSet(config.HudScoreboardBackgroundUrl, HudScoreImageName);
+            AddImageIfSet(config.HudLobbyButtonBackgroundUrl, HudLobbyImageName);
+            AddImageIfSet(config.LobbyBackgroundUrl, LobbyBackgroundImageName);
+            AddImageIfSet(config.AdminBackgroundUrl, AdminBackgroundImageName);
+        }
+
+        private void AddImageIfSet(string url, string name)
+        {
+            if (ImageLibrary == null || string.IsNullOrEmpty(url))
+            {
+                return;
+            }
+
+            ImageLibrary.Call("AddImage", url, name);
+        }
+
+        private string GetImage(string name)
+        {
+            return ImageLibrary?.Call<string>("GetImage", name);
+        }
+
+        private bool HasImage(string name)
+        {
+            return !string.IsNullOrEmpty(GetImage(name));
+        }
+
+        private void AddBackgroundImage(CuiElementContainer container, string parent, string imageName)
+        {
+            var image = GetImage(imageName);
+            if (string.IsNullOrEmpty(image))
+            {
+                return;
+            }
+
+            container.Add(new CuiElement
+            {
+                Parent = parent,
+                Components =
+                {
+                    new CuiRawImageComponent { Png = image, Color = "1 1 1 1" },
+                    new CuiRectTransformComponent { AnchorMin = "0 0", AnchorMax = "1 1" }
+                }
+            });
+        }
+
         private void OpenAdminUi(BasePlayer player)
         {
             DestroyAdminUi(player);
 
             var container = new CuiElementContainer();
-            container.Add(new CuiPanel
+            var adminHasImage = HasImage(AdminBackgroundImageName);
+            var adminPanel = container.Add(new CuiPanel
             {
-                Image = { Color = "0.08 0.08 0.08 0.92" },
+                Image = { Color = adminHasImage ? "0 0 0 0.85" : "0.08 0.08 0.08 0.92" },
                 RectTransform = { AnchorMin = "0.2 0.2", AnchorMax = "0.8 0.8" },
                 CursorEnabled = true
             }, "Overlay", AdminUiName);
 
-            AddLabel(container, AdminUiName, "Paintball Arena Admin Setup", "0.25 0.85", "0.75 0.93", 20);
-            AddLabel(container, AdminUiName, $"Lobby Spawn: {StatusLabel(config.LobbySpawn)}", "0.1 0.75", "0.4 0.8", 14);
-            AddLabel(container, AdminUiName, $"Spectator Spawn: {StatusLabel(config.SpectatorSpawn)}", "0.6 0.75", "0.9 0.8", 14);
-            AddLabel(container, AdminUiName, $"Team A Spawns: {config.TeamASpawns.Count}", "0.1 0.68", "0.4 0.73", 14);
-            AddLabel(container, AdminUiName, $"Team B Spawns: {config.TeamBSpawns.Count}", "0.6 0.68", "0.9 0.73", 14);
+            if (adminHasImage)
+            {
+                AddBackgroundImage(container, adminPanel, AdminBackgroundImageName);
+            }
 
-            AddButton(container, AdminUiName, "Set Lobby Spawn", "paintballarena.setlobby", "0.1 0.55", "0.45 0.63");
-            AddButton(container, AdminUiName, "Set Spectator Spawn", "paintballarena.setspectator", "0.55 0.55", "0.9 0.63");
-            AddButton(container, AdminUiName, "Add Team A Spawn", "paintballarena.addteama", "0.1 0.42", "0.45 0.5");
-            AddButton(container, AdminUiName, "Add Team B Spawn", "paintballarena.addteamb", "0.55 0.42", "0.9 0.5");
-            AddButton(container, AdminUiName, "Clear Team A Spawns", "paintballarena.clearteama", "0.1 0.29", "0.45 0.37");
-            AddButton(container, AdminUiName, "Clear Team B Spawns", "paintballarena.clearteamb", "0.55 0.29", "0.9 0.37");
-            AddButton(container, AdminUiName, "Close", "paintballarena.closeadmin", "0.35 0.12", "0.65 0.2", "0.8 0.2 0.2 0.9");
+            AddLabel(container, adminPanel, "Paintball Arena Admin Setup", "0.25 0.85", "0.75 0.93", 20);
+            AddLabel(container, adminPanel, $"Lobby Spawn: {StatusLabel(config.LobbySpawn)}", "0.1 0.75", "0.4 0.8", 14);
+            AddLabel(container, adminPanel, $"Spectator Spawn: {StatusLabel(config.SpectatorSpawn)}", "0.6 0.75", "0.9 0.8", 14);
+            AddLabel(container, adminPanel, $"Team A Spawns: {config.TeamASpawns.Count}", "0.1 0.68", "0.4 0.73", 14);
+            AddLabel(container, adminPanel, $"Team B Spawns: {config.TeamBSpawns.Count}", "0.6 0.68", "0.9 0.73", 14);
+
+            AddButton(container, adminPanel, "Set Lobby Spawn", "paintballarena.setlobby", "0.1 0.55", "0.45 0.63");
+            AddButton(container, adminPanel, "Set Spectator Spawn", "paintballarena.setspectator", "0.55 0.55", "0.9 0.63");
+            AddButton(container, adminPanel, "Add Team A Spawn", "paintballarena.addteama", "0.1 0.42", "0.45 0.5");
+            AddButton(container, adminPanel, "Add Team B Spawn", "paintballarena.addteamb", "0.55 0.42", "0.9 0.5");
+            AddButton(container, adminPanel, "Clear Team A Spawns", "paintballarena.clearteama", "0.1 0.29", "0.45 0.37");
+            AddButton(container, adminPanel, "Clear Team B Spawns", "paintballarena.clearteamb", "0.55 0.29", "0.9 0.37");
+            AddButton(container, adminPanel, "Close", "paintballarena.closeadmin", "0.35 0.12", "0.65 0.2", "0.8 0.2 0.2 0.9");
 
             CuiHelper.AddUi(player, container);
         }

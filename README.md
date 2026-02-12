@@ -8,6 +8,18 @@ Foundation plugin for a Rust paintball arena minigame. Phase 1 covers configurat
 - **First to 5** points wins the match.
 - After each round, active players are teleported back to their team spawns for the next round.
 
+## UI Background Images (ImageLibrary)
+
+Optional: install the **ImageLibrary** plugin to use URL-based images for UI backgrounds.
+Set the URLs in the config and reload the plugin to apply them.
+
+Config keys:
+
+- `HUD Scoreboard Background URL`
+- `HUD Lobby Button Background URL`
+- `Lobby Background URL`
+- `Admin Background URL`
+
 ## Admin Setup
 
 Grant admins the `paintballarena.admin` permission, then use `/pbadmin` to open the setup UI.
