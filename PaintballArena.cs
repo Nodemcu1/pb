@@ -17,7 +17,6 @@ namespace Oxide.Plugins
 
         private const string AdminPermission = "paintballarena.admin";
         private const string AdminUiName = "PaintballArena.AdminUI";
-        private const string HudUiName = "PaintballArena.HUD";
         private const string HudScoreUiName = "PaintballArena.HUD.Scoreboard";
         private const string HudLobbyUiName = "PaintballArena.HUD.LobbyButton";
         private const string LobbyUiName = "PaintballArena.LobbyUI";
@@ -737,7 +736,7 @@ namespace Oxide.Plugins
             var themeA = CurrentThemeA();
             var themeB = CurrentThemeB();
             var status = MatchStatusLabel();
-            var counts = $"A {GetSideCount(TeamSide.A)}/{MaxPlayersPerSide} | B {GetSideCount(TeamSide.B)}/{MaxPlayersPerSide}";
+            var counts = $"{SideLabel(TeamSide.A)} {GetSideCount(TeamSide.A)}/{MaxPlayersPerSide} | {SideLabel(TeamSide.B)} {GetSideCount(TeamSide.B)}/{MaxPlayersPerSide}";
             return string.Join("\n", new[]
             {
                 $"{themeA.Name} {scoreA} - {scoreB} {themeB.Name}",
@@ -832,7 +831,6 @@ namespace Oxide.Plugins
 
             CuiHelper.DestroyUi(player, HudScoreUiName);
             CuiHelper.DestroyUi(player, HudLobbyUiName);
-            CuiHelper.DestroyUi(player, HudUiName);
         }
 
         private void OpenLobbyUi(BasePlayer player)
@@ -1568,7 +1566,7 @@ namespace Oxide.Plugins
             var result = ImageLibrary.Call("AddImage", url, name);
             if (result == null)
             {
-                PrintWarning($"Failed to add image '{name}'. Check the ImageLibrary URL.");
+                PrintWarning($"Failed to add image '{name}' from URL '{url}'. Check the ImageLibrary URL.");
             }
         }
 
