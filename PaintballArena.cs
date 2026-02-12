@@ -736,13 +736,12 @@ namespace Oxide.Plugins
             var themeA = CurrentThemeA();
             var themeB = CurrentThemeB();
             var status = MatchStatusLabel();
-            var counts = $"{SideLabel(TeamSide.A)} {GetSideCount(TeamSide.A)}/{MaxPlayersPerSide} | {SideLabel(TeamSide.B)} {GetSideCount(TeamSide.B)}/{MaxPlayersPerSide}";
             return string.Join("\n", new[]
             {
                 $"{themeA.Name} {scoreA} - {scoreB} {themeB.Name}",
                 MatchRuleLabel(),
                 $"State: {status}",
-                counts
+                $"{SideLabel(TeamSide.A)} {GetSideCount(TeamSide.A)}/{MaxPlayersPerSide} | {SideLabel(TeamSide.B)} {GetSideCount(TeamSide.B)}/{MaxPlayersPerSide}"
             });
         }
 
@@ -785,14 +784,14 @@ namespace Oxide.Plugins
 
             var container = new CuiElementContainer();
             var scoreboardImage = GetImage(HudScoreImageName);
-            var scoreboardHasImage = !string.IsNullOrEmpty(scoreboardImage);
+            var hasScoreboardImage = !string.IsNullOrEmpty(scoreboardImage);
             var scoreboard = container.Add(new CuiPanel
             {
-                Image = { Color = scoreboardHasImage ? "0 0 0 0" : "0.08 0.08 0.08 0.75" },
+                Image = { Color = hasScoreboardImage ? "0 0 0 0" : "0.08 0.08 0.08 0.75" },
                 RectTransform = { AnchorMin = HudScoreAnchorMin, AnchorMax = HudScoreAnchorMax }
             }, "Hud", HudScoreUiName);
 
-            if (scoreboardHasImage)
+            if (hasScoreboardImage)
             {
                 AddBackgroundImage(container, scoreboard, scoreboardImage);
             }
@@ -800,14 +799,14 @@ namespace Oxide.Plugins
             AddLabel(container, scoreboard, ScoreboardText(), "0 0", "1 1", 13);
 
             var lobbyButtonImage = GetImage(HudLobbyImageName);
-            var lobbyButtonHasImage = !string.IsNullOrEmpty(lobbyButtonImage);
+            var hasLobbyButtonImage = !string.IsNullOrEmpty(lobbyButtonImage);
             var lobbyButtonPanel = container.Add(new CuiPanel
             {
-                Image = { Color = lobbyButtonHasImage ? "0 0 0 0" : "0.2 0.2 0.2 0.85" },
+                Image = { Color = hasLobbyButtonImage ? "0 0 0 0" : "0.2 0.2 0.2 0.85" },
                 RectTransform = { AnchorMin = "0.9 0.94", AnchorMax = "0.98 0.985" }
             }, "Hud", HudLobbyUiName);
 
-            if (lobbyButtonHasImage)
+            if (hasLobbyButtonImage)
             {
                 AddBackgroundImage(container, lobbyButtonPanel, lobbyButtonImage);
             }
@@ -847,15 +846,15 @@ namespace Oxide.Plugins
 
             var container = new CuiElementContainer();
             var lobbyImage = GetImage(LobbyBackgroundImageName);
-            var lobbyHasImage = !string.IsNullOrEmpty(lobbyImage);
+            var hasLobbyImage = !string.IsNullOrEmpty(lobbyImage);
             var lobbyPanel = container.Add(new CuiPanel
             {
-                Image = { Color = lobbyHasImage ? "0 0 0 0.75" : "0 0 0 0.85" },
+                Image = { Color = hasLobbyImage ? "0 0 0 0.75" : "0 0 0 0.85" },
                 RectTransform = { AnchorMin = "0 0", AnchorMax = "1 1" },
                 CursorEnabled = true
             }, "Overlay", LobbyUiName);
 
-            if (lobbyHasImage)
+            if (hasLobbyImage)
             {
                 AddBackgroundImage(container, lobbyPanel, lobbyImage);
             }
@@ -1563,8 +1562,7 @@ namespace Oxide.Plugins
                 return;
             }
 
-            var result = ImageLibrary.Call("AddImage", url, name);
-            if (result == null)
+            if (ImageLibrary.Call("AddImage", url, name) == null)
             {
                 PrintWarning($"Failed to add image '{name}' from URL '{url}'. Check the ImageLibrary plugin and URL.");
             }
@@ -1599,15 +1597,15 @@ namespace Oxide.Plugins
 
             var container = new CuiElementContainer();
             var adminImage = GetImage(AdminBackgroundImageName);
-            var adminHasImage = !string.IsNullOrEmpty(adminImage);
+            var hasAdminImage = !string.IsNullOrEmpty(adminImage);
             var adminPanel = container.Add(new CuiPanel
             {
-                Image = { Color = adminHasImage ? "0 0 0 0.85" : "0.08 0.08 0.08 0.92" },
+                Image = { Color = hasAdminImage ? "0 0 0 0.85" : "0.08 0.08 0.08 0.92" },
                 RectTransform = { AnchorMin = "0.2 0.2", AnchorMax = "0.8 0.8" },
                 CursorEnabled = true
             }, "Overlay", AdminUiName);
 
-            if (adminHasImage)
+            if (hasAdminImage)
             {
                 AddBackgroundImage(container, adminPanel, adminImage);
             }
