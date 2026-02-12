@@ -1687,13 +1687,18 @@ namespace Oxide.Plugins
 
         private string SideChatColor(TeamSide side)
         {
-            var theme = side == TeamSide.A ? CurrentThemeA() : CurrentThemeB();
+            var theme = GetThemeForSide(side);
             if (ThemeChatColors.TryGetValue(theme.Name, out var color))
             {
                 return color;
             }
 
             return ChatInfoColor;
+        }
+
+        private TeamTheme GetThemeForSide(TeamSide side)
+        {
+            return side == TeamSide.A ? CurrentThemeA() : CurrentThemeB();
         }
 
         private string MatchRuleLabel()
@@ -1744,7 +1749,7 @@ namespace Oxide.Plugins
                     continue;
                 }
 
-                var theme = side == TeamSide.A ? CurrentThemeA() : CurrentThemeB();
+                var theme = GetThemeForSide(side);
                 var message = $"Reload to get your team's {theme.Name} color.";
                 SendReply(player, FormatChat(message, SideChatColor(side), ChatSizeLarge));
             }
