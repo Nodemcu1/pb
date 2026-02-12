@@ -1231,7 +1231,14 @@ namespace Oxide.Plugins
                 return false;
             }
 
-            return weaponItem.info.shortname == PaintballGunShortname;
+            var projectile = weaponItem.GetHeldEntity() as BaseProjectile;
+            var ammoType = projectile?.primaryMagazine?.ammoType?.shortname;
+            if (string.IsNullOrEmpty(ammoType))
+            {
+                return false;
+            }
+
+            return weaponItem.info.shortname == PaintballGunShortname && ammoType == PaintballAmmoShortname;
         }
 
         private TeamSide ParseWinner(string[] args)
