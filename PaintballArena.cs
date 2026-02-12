@@ -1219,6 +1219,8 @@ namespace Oxide.Plugins
                 return;
             }
 
+            var delaySeconds = Mathf.CeilToInt(RoundResetDelay);
+            Broadcast($"Next round in {delaySeconds} seconds.");
             timer.Once(RoundResetDelay, StartRound);
         }
 
