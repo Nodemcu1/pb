@@ -21,7 +21,7 @@ namespace Oxide.Plugins
         private const string HudScoreUiName = "PaintballArena.HUD.Scoreboard";
         private const string HudLobbyUiName = "PaintballArena.HUD.LobbyButton";
         private const string LobbyUiName = "PaintballArena.LobbyUI";
-        private const string HudScoreAnchorMin = "0.3 0.93";
+        private const string HudScoreAnchorMin = "0.3 0.9";
         private const string HudScoreAnchorMax = "0.7 0.99";
         private const string HudScoreImageName = "PaintballArena.HUD.Scoreboard.Background";
         private const string HudLobbyImageName = "PaintballArena.HUD.Lobby.Background";
@@ -741,7 +741,8 @@ namespace Oxide.Plugins
             return string.Join("\n", new[]
             {
                 $"{themeA.Name} {scoreA} - {scoreB} {themeB.Name}",
-                $"{MatchRuleLabel()} {status}",
+                MatchRuleLabel(),
+                $"State: {status}",
                 counts
             });
         }
@@ -797,7 +798,7 @@ namespace Oxide.Plugins
                 AddBackgroundImage(container, scoreboard, scoreboardImage);
             }
 
-            AddLabel(container, scoreboard, ScoreboardText(), "0 0", "1 1", 12);
+            AddLabel(container, scoreboard, ScoreboardText(), "0 0", "1 1", 13);
 
             var lobbyButtonImage = GetImage(HudLobbyImageName);
             var lobbyButtonHasImage = !string.IsNullOrEmpty(lobbyButtonImage);
@@ -1564,7 +1565,11 @@ namespace Oxide.Plugins
                 return;
             }
 
-            ImageLibrary.Call("AddImage", url, name);
+            var result = ImageLibrary.Call("AddImage", url, name);
+            if (result == null)
+            {
+                PrintWarning($"Failed to add image '{name}'. Check the ImageLibrary URL.");
+            }
         }
 
         private string GetImage(string name)
