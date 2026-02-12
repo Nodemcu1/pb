@@ -738,7 +738,12 @@ namespace Oxide.Plugins
             var themeB = CurrentThemeB();
             var status = MatchStatusLabel();
             var counts = $"A {GetSideCount(TeamSide.A)}/{MaxPlayersPerSide} | B {GetSideCount(TeamSide.B)}/{MaxPlayersPerSide}";
-            return $"{themeA.Name} {scoreA} - {scoreB} {themeB.Name}\n{MatchRuleLabel()} {status}\n{counts}";
+            return string.Join("\n", new[]
+            {
+                $"{themeA.Name} {scoreA} - {scoreB} {themeB.Name}",
+                $"{MatchRuleLabel()} {status}",
+                counts
+            });
         }
 
         private string LobbyInfoText()
@@ -749,7 +754,14 @@ namespace Oxide.Plugins
             var autoStart = config.AutoStartEnabled ? "On" : "Off";
             var sideA = $"{GetSideCount(TeamSide.A)}/{MaxPlayersPerSide} (Queued {queueSideA.Count})";
             var sideB = $"{GetSideCount(TeamSide.B)}/{MaxPlayersPerSide} (Queued {queueSideB.Count})";
-            return $"{themeA.Name} vs {themeB.Name}\nScore: {scoreA} - {scoreB} ({MatchRuleLabel()})\nState: {status} | Auto Start: {autoStart}\nSide A: {sideA}\nSide B: {sideB}";
+            return string.Join("\n", new[]
+            {
+                $"{themeA.Name} vs {themeB.Name}",
+                $"Score: {scoreA} - {scoreB} ({MatchRuleLabel()})",
+                $"State: {status} | Auto Start: {autoStart}",
+                $"Side A: {sideA}",
+                $"Side B: {sideB}"
+            });
         }
 
         private string MatchStatusLabel()
@@ -1557,7 +1569,7 @@ namespace Oxide.Plugins
 
         private string GetImage(string name)
         {
-            return ImageLibrary?.Call<string>("GetImage", name);
+            return ImageLibrary?.Call<string>("GetImage", name) ?? string.Empty;
         }
 
         private void AddBackgroundImage(CuiElementContainer container, string parent, string image)
