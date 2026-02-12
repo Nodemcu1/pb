@@ -1011,7 +1011,7 @@ namespace Oxide.Plugins
             countdownRemaining = MatchCountdownSeconds;
             Broadcast($"Paintball match starts in {countdownRemaining} seconds!");
             countdownTimer?.Destroy();
-            countdownTimer = timer.Repeat(1f, countdownRemaining, () =>
+            countdownTimer = timer.Repeat(1f, MatchCountdownSeconds, () =>
             {
                 countdownRemaining--;
                 if (countdownRemaining <= 0)
@@ -1133,7 +1133,7 @@ namespace Oxide.Plugins
                 return;
             }
 
-            foreach (var userId in savedInventories.Keys.ToList())
+            foreach (var userId in savedInventories.Keys)
             {
                 var player = BasePlayer.FindByID(userId);
                 if (player == null)
