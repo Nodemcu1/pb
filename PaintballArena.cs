@@ -695,10 +695,7 @@ namespace Oxide.Plugins
             {
                 return;
             }
-            if (!queue.Contains(player.userID))
-            {
-                queue.Add(player.userID);
-            }
+            queue.Add(player.userID);
 
             SendReply(player, $"Side {side} is full. You are in the waiting queue (#{queue.Count}).");
         }
