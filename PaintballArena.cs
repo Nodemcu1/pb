@@ -744,8 +744,7 @@ namespace Oxide.Plugins
             return string.Join("\n", new[]
             {
                 $"{themeA.Name} {scoreA} - {scoreB} {themeB.Name}",
-                MatchRuleLabel(),
-                $"State: {status}",
+                $"{MatchRuleLabel()} | {status}",
                 $"{SideLabel(TeamSide.A)} {GetSideCount(TeamSide.A)}/{MaxPlayersPerSide} | {SideLabel(TeamSide.B)} {GetSideCount(TeamSide.B)}/{MaxPlayersPerSide}"
             });
         }
@@ -1221,7 +1220,10 @@ namespace Oxide.Plugins
                 }
 
                 Broadcast($"Match starts in {countdownRemaining}...");
-                RefreshHudForAll();
+                if (countdownRemaining % 2 == 0 || countdownRemaining <= 3)
+                {
+                    RefreshHudForAll();
+                }
             });
         }
 
@@ -1569,7 +1571,7 @@ namespace Oxide.Plugins
 
             if (ImageLibrary.Call("AddImage", url, name) == null)
             {
-                PrintWarning($"Failed to add image '{name}' from URL '{url}'. Check the ImageLibrary plugin and URL.");
+                PrintWarning($"Failed to add image '{name}' from URL '{url}'. Ensure ImageLibrary is loaded and the URL is valid.");
             }
         }
 
