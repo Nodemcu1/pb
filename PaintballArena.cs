@@ -16,11 +16,14 @@ namespace Oxide.Plugins
         private const string HudUiName = "PaintballArena.HUD";
         private const string LobbyUiName = "PaintballArena.LobbyUI";
         private const int MaxPlayersPerSide = 6;
+        private const int PaintballAmmoAmount = 200;
+        private const int MatchCountdownSeconds = 10;
 
         private ConfigData config;
         private readonly Dictionary<ulong, TeamSide> playerSides = new Dictionary<ulong, TeamSide>();
         private readonly List<ulong> queueSideA = new List<ulong>();
         private readonly List<ulong> queueSideB = new List<ulong>();
+        private readonly Dictionary<ulong, InventorySnapshot> savedInventories = new Dictionary<ulong, InventorySnapshot>();
         private readonly List<TeamTheme> teamThemes = new List<TeamTheme>
         {
             new TeamTheme("Orange", "1 0.5 0 0.9"),
@@ -32,6 +35,16 @@ namespace Oxide.Plugins
         private int themeIndex = 0;
         private int scoreA;
         private int scoreB;
+        private MatchState matchState = MatchState.Lobby;
+        private Timer countdownTimer;
+        private int countdownRemaining;
+
+        private enum MatchState
+        {
+            Lobby,
+            Countdown,
+            Live
+        }
 
         private enum TeamSide
         {
@@ -82,6 +95,25 @@ namespace Oxide.Plugins
                 Name = name;
                 Color = color;
             }
+        }
+
+        private class InventorySnapshot
+        {
+            public List<ItemSnapshot> Main = new List<ItemSnapshot>();
+            public List<ItemSnapshot> Belt = new List<ItemSnapshot>();
+            public List<ItemSnapshot> Wear = new List<ItemSnapshot>();
+        }
+
+        private class ItemSnapshot
+        {
+            public string Shortname;
+            public int Amount;
+            public ulong Skin;
+            public float Condition;
+            public int Slot;
+            public int Ammo;
+            public string AmmoType;
+            public List<ItemSnapshot> Contents = new List<ItemSnapshot>();
         }
 
         protected override void LoadDefaultConfig()
@@ -136,6 +168,7 @@ namespace Oxide.Plugins
         private void OnPlayerInit(BasePlayer player)
         {
             ShowHud(player);
+            RestoreInventoryIfNeeded(player);
         }
 
         private void OnPlayerDisconnected(BasePlayer player, string reason)
@@ -144,6 +177,31 @@ namespace Oxide.Plugins
             DestroyHud(player);
             DestroyLobbyUi(player);
             RemovePlayerFromSideAndQueue(player);
+        }
+
+        private void OnPlayerRespawned(BasePlayer player)
+        {
+            if (player == null || matchState != MatchState.Live)
+            {
+                return;
+            }
+
+            var side = GetPlayerSide(player.userID);
+            if (side == TeamSide.None)
+            {
+                return;
+            }
+
+            timer.Once(0.1f, () =>
+            {
+                if (player == null || !player.IsConnected)
+                {
+                    return;
+                }
+
+                EquipPaintballKit(player);
+                TeleportToSideSpawn(player, side);
+            });
         }
 
         [ChatCommand("pbadmin")]
@@ -240,6 +298,28 @@ namespace Oxide.Plugins
 
             CycleTeamThemes();
             SendReply(player, $"Next match themes: {CurrentThemeA().Name} vs {CurrentThemeB().Name}");
+        }
+
+        [ChatCommand("pbstart")]
+        private void CmdStartMatch(BasePlayer player, string command, string[] args)
+        {
+            if (!EnsureAdminPlayer(player))
+            {
+                return;
+            }
+
+            StartMatchCountdown(player);
+        }
+
+        [ChatCommand("pbend")]
+        private void CmdEndMatch(BasePlayer player, string command, string[] args)
+        {
+            if (!EnsureAdminPlayer(player))
+            {
+                return;
+            }
+
+            EndMatch(ParseWinner(args), player);
         }
 
         [ConsoleCommand("paintballarena.openadmin")]
@@ -341,6 +421,30 @@ namespace Oxide.Plugins
             }
 
             CycleTeamThemes();
+        }
+
+        [ConsoleCommand("paintballarena.start")]
+        private void ConsoleStartMatch(ConsoleSystem.Arg arg)
+        {
+            var player = arg.Player();
+            if (player != null && !EnsureAdminPlayer(player))
+            {
+                return;
+            }
+
+            StartMatchCountdown(player);
+        }
+
+        [ConsoleCommand("paintballarena.end")]
+        private void ConsoleEndMatch(ConsoleSystem.Arg arg)
+        {
+            var player = arg.Player();
+            if (player != null && !EnsureAdminPlayer(player))
+            {
+                return;
+            }
+
+            EndMatch(ParseWinner(arg.Args), player);
         }
 
         [ConsoleCommand("paintballarena.setlobby")]
@@ -605,6 +709,7 @@ namespace Oxide.Plugins
             {
                 RemovePlayerFromSideAndQueue(player);
                 SendReply(player, "You have left the match queue.");
+                RestoreInventoryIfNeeded(player);
                 DestroyLobbyUi(player);
                 return;
             }
@@ -624,6 +729,7 @@ namespace Oxide.Plugins
             }
 
             RemovePlayerFromSideAndQueue(player);
+            SaveInventoryIfNeeded(player);
 
             if (IsSideFull(side))
             {
@@ -748,6 +854,379 @@ namespace Oxide.Plugins
                 SendReply(player, $"A slot opened. You joined Side {side} ({theme.Name}).");
                 ShowHud(player);
             }
+        }
+
+        private void SaveInventoryIfNeeded(BasePlayer player)
+        {
+            if (player == null || savedInventories.ContainsKey(player.userID))
+            {
+                return;
+            }
+
+            savedInventories[player.userID] = new InventorySnapshot
+            {
+                Main = CaptureContainer(player.inventory.containerMain),
+                Belt = CaptureContainer(player.inventory.containerBelt),
+                Wear = CaptureContainer(player.inventory.containerWear)
+            };
+        }
+
+        private void RestoreInventoryIfNeeded(BasePlayer player)
+        {
+            if (player == null)
+            {
+                return;
+            }
+
+            if (!savedInventories.TryGetValue(player.userID, out var snapshot))
+            {
+                return;
+            }
+
+            savedInventories.Remove(player.userID);
+            player.inventory.Strip();
+            RestoreContainer(player.inventory.containerWear, snapshot.Wear);
+            RestoreContainer(player.inventory.containerBelt, snapshot.Belt);
+            RestoreContainer(player.inventory.containerMain, snapshot.Main);
+            player.SendNetworkUpdateImmediate();
+        }
+
+        private List<ItemSnapshot> CaptureContainer(ItemContainer container)
+        {
+            var list = new List<ItemSnapshot>();
+            if (container == null)
+            {
+                return list;
+            }
+
+            foreach (var item in container.itemList)
+            {
+                list.Add(CaptureItem(item));
+            }
+
+            return list;
+        }
+
+        private ItemSnapshot CaptureItem(Item item)
+        {
+            var snapshot = new ItemSnapshot
+            {
+                Shortname = item.info.shortname,
+                Amount = item.amount,
+                Skin = item.skin,
+                Condition = item.condition,
+                Slot = item.position
+            };
+
+            if (item.contents != null && item.contents.itemList != null)
+            {
+                foreach (var child in item.contents.itemList)
+                {
+                    snapshot.Contents.Add(CaptureItem(child));
+                }
+            }
+
+            var projectile = item.GetHeldEntity() as BaseProjectile;
+            if (projectile != null && projectile.primaryMagazine != null)
+            {
+                snapshot.Ammo = projectile.primaryMagazine.contents;
+                snapshot.AmmoType = projectile.primaryMagazine.ammoType?.shortname;
+            }
+
+            return snapshot;
+        }
+
+        private void RestoreContainer(ItemContainer container, List<ItemSnapshot> snapshots)
+        {
+            if (container == null || snapshots == null)
+            {
+                return;
+            }
+
+            foreach (var snapshot in snapshots)
+            {
+                RestoreItem(container, snapshot);
+            }
+        }
+
+        private void RestoreItem(ItemContainer container, ItemSnapshot snapshot)
+        {
+            var item = ItemManager.CreateByName(snapshot.Shortname, snapshot.Amount, snapshot.Skin);
+            if (item == null)
+            {
+                return;
+            }
+
+            if (item.hasCondition)
+            {
+                item.condition = snapshot.Condition;
+            }
+
+            item.MoveToContainer(container, snapshot.Slot);
+
+            if (item.contents != null && snapshot.Contents != null)
+            {
+                RestoreContainer(item.contents, snapshot.Contents);
+            }
+
+            if (snapshot.Ammo > 0)
+            {
+                var projectile = item.GetHeldEntity() as BaseProjectile;
+                if (projectile != null && projectile.primaryMagazine != null)
+                {
+                    var ammoDefinition = string.IsNullOrEmpty(snapshot.AmmoType)
+                        ? projectile.primaryMagazine.ammoType
+                        : ItemManager.FindItemDefinition(snapshot.AmmoType);
+                    if (ammoDefinition != null)
+                    {
+                        projectile.primaryMagazine.ammoType = ammoDefinition;
+                    }
+
+                    projectile.primaryMagazine.contents = snapshot.Ammo;
+                }
+            }
+        }
+
+        private void StartMatchCountdown(BasePlayer starter)
+        {
+            if (matchState != MatchState.Lobby)
+            {
+                Reply(starter, "A match is already in progress.");
+                return;
+            }
+
+            if (config.TeamASpawns.Count == 0 || config.TeamBSpawns.Count == 0)
+            {
+                Reply(starter, "Match spawns are not configured for both teams.");
+                return;
+            }
+
+            if (GetSideCount(TeamSide.A) == 0 || GetSideCount(TeamSide.B) == 0)
+            {
+                Reply(starter, "Both teams need at least one player to start.");
+                return;
+            }
+
+            matchState = MatchState.Countdown;
+            countdownRemaining = MatchCountdownSeconds;
+            Broadcast($"Paintball match starts in {countdownRemaining} seconds!");
+            countdownTimer?.Destroy();
+            countdownTimer = timer.Repeat(1f, countdownRemaining, () =>
+            {
+                countdownRemaining--;
+                if (countdownRemaining <= 0)
+                {
+                    countdownTimer?.Destroy();
+                    countdownTimer = null;
+                    BeginMatch();
+                    return;
+                }
+
+                Broadcast($"Match starts in {countdownRemaining}...");
+            });
+        }
+
+        private void BeginMatch()
+        {
+            matchState = MatchState.Live;
+            Broadcast("Paintball match is live!");
+            TeleportSidePlayers(TeamSide.A);
+            TeleportSidePlayers(TeamSide.B);
+            TeleportQueuedPlayersToSpectator();
+        }
+
+        private void EndMatch(TeamSide winner, BasePlayer caller = null)
+        {
+            if (matchState == MatchState.Lobby)
+            {
+                Reply(caller, "No match is currently running.");
+                return;
+            }
+
+            matchState = MatchState.Lobby;
+            countdownTimer?.Destroy();
+            countdownTimer = null;
+
+            var message = winner == TeamSide.None
+                ? "Match ended in a draw."
+                : $"Match ended. Side {winner} wins!";
+            Broadcast(message);
+
+            TeleportAllToLobby();
+            RestoreAllInventories();
+            playerSides.Clear();
+            queueSideA.Clear();
+            queueSideB.Clear();
+            CycleTeamThemes();
+        }
+
+        private TeamSide ParseWinner(string[] args)
+        {
+            if (args == null || args.Length == 0)
+            {
+                return TeamSide.None;
+            }
+
+            var value = args[0].ToLowerInvariant();
+            if (value == "a" || value == "sidea")
+            {
+                return TeamSide.A;
+            }
+
+            if (value == "b" || value == "sideb")
+            {
+                return TeamSide.B;
+            }
+
+            return TeamSide.None;
+        }
+
+        private void TeleportSidePlayers(TeamSide side)
+        {
+            foreach (var player in BasePlayer.activePlayerList)
+            {
+                if (GetPlayerSide(player.userID) != side)
+                {
+                    continue;
+                }
+
+                SaveInventoryIfNeeded(player);
+                EquipPaintballKit(player);
+                TeleportToSideSpawn(player, side);
+            }
+        }
+
+        private void TeleportToSideSpawn(BasePlayer player, TeamSide side)
+        {
+            var spawn = GetRandomSpawn(side == TeamSide.A ? config.TeamASpawns : config.TeamBSpawns);
+            if (spawn == null)
+            {
+                return;
+            }
+
+            player.Teleport(spawn.Position, Quaternion.Euler(spawn.Rotation));
+        }
+
+        private void TeleportQueuedPlayersToSpectator()
+        {
+            if (config.SpectatorSpawn == null)
+            {
+                return;
+            }
+
+            foreach (var userId in queueSideA.Concat(queueSideB))
+            {
+                var player = BasePlayer.FindByID(userId);
+                if (player == null)
+                {
+                    continue;
+                }
+
+                player.Teleport(config.SpectatorSpawn.Position, Quaternion.Euler(config.SpectatorSpawn.Rotation));
+            }
+        }
+
+        private void TeleportAllToLobby()
+        {
+            if (config.LobbySpawn == null)
+            {
+                return;
+            }
+
+            foreach (var userId in savedInventories.Keys.ToList())
+            {
+                var player = BasePlayer.FindByID(userId);
+                if (player == null)
+                {
+                    continue;
+                }
+
+                player.Teleport(config.LobbySpawn.Position, Quaternion.Euler(config.LobbySpawn.Rotation));
+            }
+        }
+
+        private void RestoreAllInventories()
+        {
+            var userIds = savedInventories.Keys.ToList();
+            foreach (var userId in userIds)
+            {
+                var player = BasePlayer.FindByID(userId);
+                if (player == null)
+                {
+                    continue;
+                }
+
+                RestoreInventoryIfNeeded(player);
+            }
+        }
+
+        private void EquipPaintballKit(BasePlayer player)
+        {
+            if (player == null)
+            {
+                return;
+            }
+
+            player.inventory.Strip();
+            GiveItem(player, "paintballoveralls.suit", 1, player.inventory.containerWear);
+            GiveItem(player, "paintballgun", 1, player.inventory.containerBelt);
+            GiveItem(player, "ammo.paintball", PaintballAmmoAmount, player.inventory.containerMain);
+        }
+
+        private void GiveItem(BasePlayer player, string shortname, int amount, ItemContainer container)
+        {
+            var definition = ItemManager.FindItemDefinition(shortname);
+            if (definition == null)
+            {
+                PrintWarning($"Item definition not found: {shortname}");
+                return;
+            }
+
+            var item = ItemManager.Create(definition, amount);
+            if (item == null)
+            {
+                return;
+            }
+
+            if (container != null && item.MoveToContainer(container))
+            {
+                return;
+            }
+
+            player.GiveItem(item);
+        }
+
+        private SpawnPoint GetRandomSpawn(List<SpawnPoint> spawns)
+        {
+            if (spawns == null || spawns.Count == 0)
+            {
+                return null;
+            }
+
+            return spawns[UnityEngine.Random.Range(0, spawns.Count)];
+        }
+
+        private void Broadcast(string message)
+        {
+            if (!string.IsNullOrEmpty(message))
+            {
+                PrintToChat(message);
+            }
+        }
+
+        private void Reply(BasePlayer player, string message)
+        {
+            if (player == null)
+            {
+                if (!string.IsNullOrEmpty(message))
+                {
+                    PrintWarning(message);
+                }
+
+                return;
+            }
+
+            SendReply(player, message);
         }
 
         private void OpenAdminUi(BasePlayer player)

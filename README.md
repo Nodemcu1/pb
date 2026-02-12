@@ -1,6 +1,6 @@
-# Paintball Arena (Phase 3)
+# Paintball Arena (Phase 4)
 
-Foundation plugin for a Rust paintball arena minigame. Phase 1 covers configuration and admin setup. Phase 2 adds the HUD, lobby UI, and team theme cycling. Phase 3 adds team caps and waiting queues.
+Foundation plugin for a Rust paintball arena minigame. Phase 1 covers configuration and admin setup. Phase 2 adds the HUD, lobby UI, and team theme cycling. Phase 3 adds team caps and waiting queues. Phase 4 adds match flow, kit loadouts, and inventory restore.
 
 ## Admin Setup
 
@@ -17,3 +17,5 @@ Grant admins the `paintballarena.admin` permission, then use `/pbadmin` to open 
 - `/pbclearb` - Clear all Team B spawns.
 - `/pblobbyui` - Open the lobby UI.
 - `/pbcycle` - Cycle the active team themes (admin only).
+- `/pbstart` - Start a match countdown (admin only).
+- `/pbend [a|b]` - End the match and declare a winner (admin only, omit for draw).
