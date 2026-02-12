@@ -35,6 +35,7 @@ namespace Oxide.Plugins
             public Vector3 Position;
             public Vector3 Rotation;
 
+            [JsonConstructor]
             public SpawnPoint()
             {
             }
@@ -63,9 +64,9 @@ namespace Oxide.Plugins
                     throw new JsonException("Config is empty.");
                 }
             }
-            catch
+            catch (System.Exception ex)
             {
-                PrintWarning("Failed to read config. Creating new config file.");
+                PrintWarning($"Failed to read config ({ex.Message}). Creating new config file.");
                 LoadDefaultConfig();
             }
         }
