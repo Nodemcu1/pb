@@ -154,7 +154,13 @@ namespace Oxide.Plugins
 
         protected override void LoadDefaultConfig()
         {
-            config = new ConfigData();
+            config = new ConfigData
+            {
+                HudScoreboardBackgroundUrl = string.Empty,
+                HudLobbyButtonBackgroundUrl = string.Empty,
+                LobbyBackgroundUrl = string.Empty,
+                AdminBackgroundUrl = string.Empty
+            };
             SaveConfig();
         }
 
@@ -168,6 +174,7 @@ namespace Oxide.Plugins
                 {
                     throw new JsonException("Config is empty.");
                 }
+                NormalizeConfig();
             }
             catch (System.Exception ex)
             {
@@ -179,6 +186,19 @@ namespace Oxide.Plugins
         protected override void SaveConfig()
         {
             Config.WriteObject(config, true);
+        }
+
+        private void NormalizeConfig()
+        {
+            if (config == null)
+            {
+                return;
+            }
+
+            config.HudScoreboardBackgroundUrl ??= string.Empty;
+            config.HudLobbyButtonBackgroundUrl ??= string.Empty;
+            config.LobbyBackgroundUrl ??= string.Empty;
+            config.AdminBackgroundUrl ??= string.Empty;
         }
 
         private void Init()
