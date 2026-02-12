@@ -1221,19 +1221,19 @@ namespace Oxide.Plugins
 
             var delaySeconds = Mathf.CeilToInt(RoundResetDelay);
             Broadcast($"Next round in {delaySeconds} seconds.");
-            timer.Once(RoundResetDelay, StartRound);
+            timer.Once(delaySeconds, StartRound);
         }
 
         private bool IsPaintballHit(HitInfo info)
         {
             var weaponItem = info.Weapon?.GetItem();
-            if (weaponItem != null)
+            if (weaponItem == null)
             {
-                return weaponItem.info.shortname == PaintballGunShortname;
+                return false;
             }
 
             var ammoType = info.AmmoType?.shortname;
-            return ammoType == PaintballAmmoShortname;
+            return weaponItem.info.shortname == PaintballGunShortname && ammoType == PaintballAmmoShortname;
         }
 
         private TeamSide ParseWinner(string[] args)
