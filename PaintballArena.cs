@@ -18,6 +18,8 @@ namespace Oxide.Plugins
         private const int MaxPlayersPerSide = 6;
         private const int PaintballAmmoAmount = 200;
         private const int MatchCountdownSeconds = 10;
+        private const int ScoreLimit = 5;
+        private const float RoundResetDelay = 3f;
 
         private ConfigData config;
         private readonly Dictionary<ulong, TeamSide> playerSides = new Dictionary<ulong, TeamSide>();
@@ -38,6 +40,7 @@ namespace Oxide.Plugins
         private MatchState matchState = MatchState.Lobby;
         private Timer countdownTimer;
         private int countdownRemaining;
+        private bool roundInProgress;
 
         private enum MatchState
         {
@@ -205,6 +208,44 @@ namespace Oxide.Plugins
                 EquipPaintballKit(player);
                 TeleportToSideSpawn(player, side);
             });
+        }
+
+        private object OnEntityTakeDamage(BaseCombatEntity entity, HitInfo info)
+        {
+            if (matchState != MatchState.Live || !roundInProgress)
+            {
+                return null;
+            }
+
+            var victim = entity as BasePlayer;
+            if (victim == null || info == null)
+            {
+                return null;
+            }
+
+            var attacker = info.Initiator as BasePlayer;
+            if (attacker == null || attacker == victim)
+            {
+                return null;
+            }
+
+            var attackerSide = GetPlayerSide(attacker.userID);
+            var victimSide = GetPlayerSide(victim.userID);
+            if (attackerSide == TeamSide.None || victimSide == TeamSide.None || attackerSide == victimSide)
+            {
+                return null;
+            }
+
+            if (!IsPaintballHit(info))
+            {
+                return null;
+            }
+
+            info.damageTypes?.ScaleAll(0f);
+            info.HitMaterial = 0;
+            info.DoHitEffects = false;
+            HandlePaintballHit(attackerSide, attacker.displayName, victim.displayName);
+            return true;
         }
 
         [ChatCommand("pbadmin")]
@@ -1107,9 +1148,8 @@ namespace Oxide.Plugins
         private void BeginMatch()
         {
             matchState = MatchState.Live;
-            Broadcast("Paintball match is live!");
-            TeleportSidePlayers(TeamSide.A);
-            TeleportSidePlayers(TeamSide.B);
+            Broadcast($"Paintball match is live! First to {ScoreLimit}.");
+            StartRound();
             TeleportQueuedPlayersToSpectator();
         }
 
@@ -1122,6 +1162,7 @@ namespace Oxide.Plugins
             }
 
             matchState = MatchState.Lobby;
+            roundInProgress = false;
             countdownTimer?.Destroy();
             countdownTimer = null;
 
@@ -1136,6 +1177,59 @@ namespace Oxide.Plugins
             queueSideA.Clear();
             queueSideB.Clear();
             CycleTeamThemes();
+        }
+
+        private void StartRound()
+        {
+            if (matchState != MatchState.Live)
+            {
+                return;
+            }
+
+            roundInProgress = true;
+            TeleportSidePlayers(TeamSide.A);
+            TeleportSidePlayers(TeamSide.B);
+        }
+
+        private void HandlePaintballHit(TeamSide scoringSide, string attackerName, string victimName)
+        {
+            if (!roundInProgress)
+            {
+                return;
+            }
+
+            roundInProgress = false;
+            if (scoringSide == TeamSide.A)
+            {
+                scoreA++;
+            }
+            else if (scoringSide == TeamSide.B)
+            {
+                scoreB++;
+            }
+
+            RefreshHudForAll();
+            Broadcast($"{attackerName} hit {victimName}. Side {scoringSide} scores!");
+
+            if (scoreA >= ScoreLimit || scoreB >= ScoreLimit)
+            {
+                EndMatch(scoreA >= ScoreLimit ? TeamSide.A : TeamSide.B);
+                return;
+            }
+
+            timer.Once(RoundResetDelay, StartRound);
+        }
+
+        private bool IsPaintballHit(HitInfo info)
+        {
+            var weaponItem = info.Weapon?.GetItem();
+            if (weaponItem != null && weaponItem.info.shortname == "paintballgun")
+            {
+                return true;
+            }
+
+            var ammoType = info.AmmoType?.shortname;
+            return ammoType == "ammo.paintball";
         }
 
         private TeamSide ParseWinner(string[] args)
@@ -1260,6 +1354,8 @@ namespace Oxide.Plugins
             GiveItem(player, "paintballoveralls.suit", 1, player.inventory.containerWear);
             GiveItem(player, "paintballgun", 1, player.inventory.containerBelt);
             GiveItem(player, "ammo.paintball", PaintballAmmoAmount, player.inventory.containerMain);
+            player.health = player.MaxHealth();
+            player.SendNetworkUpdateImmediate();
         }
 
         private void GiveItem(BasePlayer player, string shortname, int amount, ItemContainer container)

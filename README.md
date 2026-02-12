@@ -2,6 +2,12 @@
 
 Foundation plugin for a Rust paintball arena minigame. Phase 1 covers configuration and admin setup. Phase 2 adds the HUD, lobby UI, and team theme cycling. Phase 3 adds team caps and waiting queues. Phase 4 adds match flow, kit loadouts, and inventory restore.
 
+## Match Rules
+
+- **First hit ends the round.** The scoring team gains 1 point.
+- **First to 5** points wins the match.
+- After each round, active players are teleported back to their team spawns for the next round.
+
 ## Admin Setup
 
 Grant admins the `paintballarena.admin` permission, then use `/pbadmin` to open the setup UI.
