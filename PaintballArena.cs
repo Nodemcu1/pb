@@ -1392,10 +1392,6 @@ namespace Oxide.Plugins
                 if (countdownRemaining == 5 || countdownRemaining == 3 || countdownRemaining == 1)
                 {
                     Broadcast($"Match starts in {countdownRemaining}...", ChatInfoColor, ChatSizeNormal);
-                }
-
-                if (countdownRemaining <= 5)
-                {
                     RefreshHudForAll();
                 }
             });
@@ -1748,7 +1744,7 @@ namespace Oxide.Plugins
                 }
 
                 var theme = side == TeamSide.A ? CurrentThemeA() : CurrentThemeB();
-                var message = $"Hold R and reload to {theme.Name} color.";
+                var message = $"Hold R and reload for {theme.Name} color.";
                 SendReply(player, FormatChat(message, SideChatColor(side), ChatSizeLarge));
             }
         }
