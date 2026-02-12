@@ -22,6 +22,11 @@ namespace Oxide.Plugins
         private const string LobbyUiName = "PaintballArena.LobbyUI";
         private const string HudScoreAnchorMin = "0.3 0.88";
         private const string HudScoreAnchorMax = "0.7 0.99";
+        private const string HudScoreTextAnchorMin = "0.02 0.05";
+        private const string HudScoreTextAnchorMax = "0.98 0.95";
+        private const string LobbyInfoAnchorMin = "0.2 0.62";
+        private const string LobbyInfoAnchorMax = "0.8 0.85";
+        private const int LobbyInfoFontSize = 13;
         private const string HudScoreImageName = "PaintballArena.HUD.Scoreboard.Background";
         private const string HudLobbyImageName = "PaintballArena.HUD.Lobby.Background";
         private const string LobbyBackgroundImageName = "PaintballArena.Lobby.Background";
@@ -796,7 +801,7 @@ namespace Oxide.Plugins
                 AddBackgroundImage(container, scoreboard, scoreboardImage);
             }
 
-            AddLabel(container, scoreboard, ScoreboardText(), "0 0", "1 1", 13);
+            AddLabel(container, scoreboard, ScoreboardText(), HudScoreTextAnchorMin, HudScoreTextAnchorMax, 13);
 
             var lobbyButtonImage = GetImage(HudLobbyImageName);
             var hasLobbyButtonImage = !string.IsNullOrEmpty(lobbyButtonImage);
@@ -860,7 +865,7 @@ namespace Oxide.Plugins
             }
 
             AddLabel(container, lobbyPanel, "Paintball Lobby", "0.3 0.86", "0.7 0.93", 24);
-            AddLabel(container, lobbyPanel, LobbyInfoText(), "0.2 0.62", "0.8 0.85", 13);
+            AddLabel(container, lobbyPanel, LobbyInfoText(), LobbyInfoAnchorMin, LobbyInfoAnchorMax, LobbyInfoFontSize);
 
             AddButton(container, lobbyPanel, $"Join Side A ({themeA.Name})", "paintballarena.joina", "0.35 0.52", "0.65 0.6", themeA.Color);
             AddButton(container, lobbyPanel, $"Join Side B ({themeB.Name})", "paintballarena.joinb", "0.35 0.43", "0.65 0.51", themeB.Color);
