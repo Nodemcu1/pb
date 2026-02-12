@@ -6,6 +6,24 @@ Foundation plugin for a Rust paintball arena minigame. Phase 1 covers configurat
 
 Grant admins the `paintballarena.admin` permission, then use `/pbadmin` to open the setup UI.
 
+### Setting Spawns
+
+Use the admin UI or chat commands while standing on the desired location:
+
+- **UI:** `/pbadmin` → click **Set Lobby Spawn**, **Set Spectator Spawn**, **Add Team A Spawn**, **Add Team B Spawn**.
+- **Chat:** `/pblobby`, `/pbspectator`, `/pbteama`, `/pbteamb`.
+
+Use `/pbcleara` or `/pbclearb` to reset team spawns.
+
+### Choosing Sides
+
+Open the lobby UI and click the side buttons:
+
+- **HUD button:** Click **Lobby** in the top HUD.
+- **Chat:** `/pblobbyui`.
+
+Then choose **Join Side A**, **Join Side B**, or **Leave Match** from the lobby screen.
+
 ### Chat Commands
 
 - `/pbadmin` - Open the admin setup UI.
