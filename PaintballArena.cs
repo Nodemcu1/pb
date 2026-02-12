@@ -1225,9 +1225,9 @@ namespace Oxide.Plugins
         private bool IsPaintballHit(HitInfo info)
         {
             var weaponItem = info.Weapon?.GetItem();
-            if (weaponItem != null && weaponItem.info.shortname == PaintballGunShortname)
+            if (weaponItem != null)
             {
-                return true;
+                return weaponItem.info.shortname == PaintballGunShortname;
             }
 
             var ammoType = info.AmmoType?.shortname;
