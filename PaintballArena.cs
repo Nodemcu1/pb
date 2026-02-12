@@ -25,7 +25,7 @@ namespace Oxide.Plugins
             new TeamTheme("Blue", "0.2 0.5 0.9 0.9"),
             new TeamTheme("Purple", "0.6 0.3 0.8 0.9")
         };
-        private int themeIndex = -1;
+        private int themeIndex = 0;
         private int scoreA;
         private int scoreB;
 
@@ -126,7 +126,7 @@ namespace Oxide.Plugins
 
         private void OnServerInitialized()
         {
-            CycleTeamThemes();
+            RefreshHudForAll();
         }
 
         private void OnPlayerInit(BasePlayer player)
@@ -139,10 +139,7 @@ namespace Oxide.Plugins
             DestroyAdminUi(player);
             DestroyHud(player);
             DestroyLobbyUi(player);
-            if (player != null)
-            {
-                playerSides.Remove(player.userID);
-            }
+            playerSides.Remove(player.userID);
         }
 
         [ChatCommand("pbadmin")]
@@ -268,31 +265,66 @@ namespace Oxide.Plugins
         [ConsoleCommand("paintballarena.openlobby")]
         private void ConsoleOpenLobby(ConsoleSystem.Arg arg)
         {
-            OpenLobbyUi(arg.Player());
+            var player = arg.Player();
+            if (player == null)
+            {
+                PrintWarning("paintballarena.openlobby can only be used by a player.");
+                return;
+            }
+
+            OpenLobbyUi(player);
         }
 
         [ConsoleCommand("paintballarena.closelobby")]
         private void ConsoleCloseLobby(ConsoleSystem.Arg arg)
         {
-            DestroyLobbyUi(arg.Player());
+            var player = arg.Player();
+            if (player == null)
+            {
+                PrintWarning("paintballarena.closelobby can only be used by a player.");
+                return;
+            }
+
+            DestroyLobbyUi(player);
         }
 
         [ConsoleCommand("paintballarena.joina")]
         private void ConsoleJoinA(ConsoleSystem.Arg arg)
         {
-            SetPlayerSide(arg.Player(), TeamSide.A);
+            var player = arg.Player();
+            if (player == null)
+            {
+                PrintWarning("paintballarena.joina can only be used by a player.");
+                return;
+            }
+
+            SetPlayerSide(player, TeamSide.A);
         }
 
         [ConsoleCommand("paintballarena.joinb")]
         private void ConsoleJoinB(ConsoleSystem.Arg arg)
         {
-            SetPlayerSide(arg.Player(), TeamSide.B);
+            var player = arg.Player();
+            if (player == null)
+            {
+                PrintWarning("paintballarena.joinb can only be used by a player.");
+                return;
+            }
+
+            SetPlayerSide(player, TeamSide.B);
         }
 
         [ConsoleCommand("paintballarena.leave")]
         private void ConsoleLeave(ConsoleSystem.Arg arg)
         {
-            SetPlayerSide(arg.Player(), TeamSide.None);
+            var player = arg.Player();
+            if (player == null)
+            {
+                PrintWarning("paintballarena.leave can only be used by a player.");
+                return;
+            }
+
+            SetPlayerSide(player, TeamSide.None);
         }
 
         [ConsoleCommand("paintballarena.cyclethemes")]
@@ -463,22 +495,12 @@ namespace Oxide.Plugins
 
         private TeamTheme CurrentThemeA()
         {
-            EnsureThemeIndex();
             return teamThemes[themeIndex];
         }
 
         private TeamTheme CurrentThemeB()
         {
-            EnsureThemeIndex();
             return teamThemes[(themeIndex + 1) % teamThemes.Count];
-        }
-
-        private void EnsureThemeIndex()
-        {
-            if (themeIndex < 0 && teamThemes.Count > 0)
-            {
-                themeIndex = 0;
-            }
         }
 
         private string ScoreboardText()
