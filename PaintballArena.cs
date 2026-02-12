@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
@@ -40,10 +41,11 @@ namespace Oxide.Plugins
         private const string PaintballAmmoShortname = "ammo.paintball";
         private const string ChatPrefixColor = "#ffb347";
         private const string ChatInfoColor = "#f5f5f5";
+        private const string ChatMatchLiveColor = "#9be37c";
         private const int ChatSizeNormal = 14;
         private const int ChatSizeLarge = 16;
         private static readonly HashSet<int> CountdownAnnouncementSeconds = new HashSet<int> { 5, 3, 1 };
-        private static readonly Dictionary<string, string> ThemeChatColors = new Dictionary<string, string>(System.StringComparer.OrdinalIgnoreCase)
+        private static readonly Dictionary<string, string> ThemeChatColors = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["orange"] = "#ffa500",
             ["green"] = "#4caf50",
@@ -1425,7 +1427,7 @@ namespace Oxide.Plugins
         private void BeginMatch()
         {
             matchState = MatchState.Live;
-            Broadcast($"Match is live! {MatchRuleLabel()}", "#9be37c", ChatSizeLarge);
+            Broadcast($"Match is live! {MatchRuleLabel()}", ChatMatchLiveColor, ChatSizeLarge);
             StartRound();
             TeleportQueuedPlayersToSpectator();
             RefreshHudForAll();
