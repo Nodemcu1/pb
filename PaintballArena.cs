@@ -1104,7 +1104,7 @@ namespace Oxide.Plugins
                 return;
             }
 
-            player.Teleport(spawn.Position, Quaternion.Euler(spawn.Rotation));
+            player.Teleport(spawn.Position);
         }
 
         private void TeleportQueuedPlayersToSpectator()
@@ -1122,7 +1122,7 @@ namespace Oxide.Plugins
                     continue;
                 }
 
-                player.Teleport(config.SpectatorSpawn.Position, Quaternion.Euler(config.SpectatorSpawn.Rotation));
+                player.Teleport(config.SpectatorSpawn.Position);
             }
         }
 
@@ -1152,7 +1152,7 @@ namespace Oxide.Plugins
                     continue;
                 }
 
-                player.Teleport(config.LobbySpawn.Position, Quaternion.Euler(config.LobbySpawn.Rotation));
+                player.Teleport(config.LobbySpawn.Position);
             }
         }
 
