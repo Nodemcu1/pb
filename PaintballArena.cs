@@ -697,7 +697,7 @@ namespace Oxide.Plugins
             }
             queue.Add(player.userID);
 
-            SendReply(player, $"Side {side} is full. You are in the waiting queue (#{queue.Count}).");
+            SendReply(player, $"Side {side} is full. You are in the waiting queue (position #{queue.Count}).");
         }
 
         private bool IsQueuedForSide(ulong userId, TeamSide side)
