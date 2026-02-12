@@ -1752,7 +1752,7 @@ namespace Oxide.Plugins
                 }
 
                 var theme = GetThemeForSide(side);
-                var message = $"Reload to get your team's {theme.Name} color.";
+                var message = $"Reload to get your {theme.Name} team color.";
                 SendReply(player, FormatChat(message, SideChatColor(side), ChatSizeLarge));
             }
         }
