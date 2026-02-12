@@ -1695,9 +1695,14 @@ namespace Oxide.Plugins
                 return ChatInfoColor;
             }
 
-            if (ThemeChatColors.TryGetValue(theme.Name, out var color))
+            if (TryParseHexColor(theme.Color, out var hexColor))
             {
-                return color;
+                return hexColor;
+            }
+
+            if (ThemeChatColors.TryGetValue(theme.Name, out var fallbackColor))
+            {
+                return fallbackColor;
             }
 
             return ChatInfoColor;
@@ -1708,7 +1713,7 @@ namespace Oxide.Plugins
             return side == TeamSide.A ? CurrentThemeA() : CurrentThemeB();
         }
 
-        private string ThemeColorLabel(TeamSide side)
+        private string ThemeNameLabel(TeamSide side)
         {
             var theme = GetThemeForSide(side);
             if (theme == null || string.IsNullOrEmpty(theme.Name))
@@ -1717,6 +1722,34 @@ namespace Oxide.Plugins
             }
 
             return theme.Name;
+        }
+
+        private bool TryParseHexColor(string rgba, out string hex)
+        {
+            hex = null;
+            if (string.IsNullOrEmpty(rgba))
+            {
+                return false;
+            }
+
+            var parts = rgba.Split(' ');
+            if (parts.Length < 3)
+            {
+                return false;
+            }
+
+            if (!float.TryParse(parts[0], out var r)
+                || !float.TryParse(parts[1], out var g)
+                || !float.TryParse(parts[2], out var b))
+            {
+                return false;
+            }
+
+            var red = Mathf.Clamp(Mathf.RoundToInt(r * 255f), 0, 255);
+            var green = Mathf.Clamp(Mathf.RoundToInt(g * 255f), 0, 255);
+            var blue = Mathf.Clamp(Mathf.RoundToInt(b * 255f), 0, 255);
+            hex = $"#{red:X2}{green:X2}{blue:X2}";
+            return true;
         }
 
         private string MatchRuleLabel()
@@ -1767,7 +1800,7 @@ namespace Oxide.Plugins
                     continue;
                 }
 
-                var message = $"Reload to get your {ThemeColorLabel(side)} team color.";
+                var message = $"Reload to get your {ThemeNameLabel(side)} team color.";
                 SendReply(player, FormatChat(message, SideChatColor(side), ChatSizeLarge));
             }
         }
