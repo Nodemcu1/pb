@@ -57,3 +57,5 @@ Then choose **Join Side A**, **Join Side B**, or **Leave Match** from the lobby 
 - `/pbforcestart` - Force start the match countdown even if only one side has players (admin only).
 - `/pbautostart` - Toggle auto-start when both sides have players (admin only).
 - `/pbend [a|b]` - End the match and declare a winner (admin only, omit for draw).
+- `/pbsetimage <scoreboard|lobbybutton|lobby|admin> <url>` - Set ImageLibrary URL for a UI panel (admin only).
+- `/pbclearimage <scoreboard|lobbybutton|lobby|admin>` - Clear the ImageLibrary URL for a UI panel (admin only).

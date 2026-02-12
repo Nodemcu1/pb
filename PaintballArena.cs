@@ -201,6 +201,55 @@ namespace Oxide.Plugins
             config.AdminBackgroundUrl ??= string.Empty;
         }
 
+        private bool SetImageUrl(BasePlayer player, string key, string url)
+        {
+            if (!TryResolveImageKey(key, out var setter, out var label))
+            {
+                Reply(player, "Valid keys: scoreboard, lobbybutton, lobby, admin.");
+                return false;
+            }
+
+            setter(url ?? string.Empty);
+            SaveConfig();
+            LoadImages();
+            RefreshHudForAll();
+            Reply(player, $"{label} image URL {(string.IsNullOrEmpty(url) ? "cleared" : "updated")}.");
+            return true;
+        }
+
+        private bool TryResolveImageKey(string key, out System.Action<string> setter, out string label)
+        {
+            setter = null;
+            label = null;
+            if (string.IsNullOrEmpty(key))
+            {
+                return false;
+            }
+
+            switch (key.ToLowerInvariant())
+            {
+                case "scoreboard":
+                    setter = value => config.HudScoreboardBackgroundUrl = value;
+                    label = "Scoreboard";
+                    return true;
+                case "lobbybutton":
+                case "hudlobby":
+                    setter = value => config.HudLobbyButtonBackgroundUrl = value;
+                    label = "Lobby button";
+                    return true;
+                case "lobby":
+                    setter = value => config.LobbyBackgroundUrl = value;
+                    label = "Lobby";
+                    return true;
+                case "admin":
+                    setter = value => config.AdminBackgroundUrl = value;
+                    label = "Admin";
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
         private void Init()
         {
             permission.RegisterPermission(AdminPermission, this);
@@ -430,6 +479,41 @@ namespace Oxide.Plugins
             SendReply(player, $"Auto start is now {(config.AutoStartEnabled ? "enabled" : "disabled")}.");
         }
 
+        [ChatCommand("pbsetimage")]
+        private void CmdSetImage(BasePlayer player, string command, string[] args)
+        {
+            if (!EnsureAdminPlayer(player))
+            {
+                return;
+            }
+
+            if (args.Length < 2)
+            {
+                SendReply(player, "Usage: /pbsetimage <scoreboard|lobbybutton|lobby|admin> <url>");
+                return;
+            }
+
+            var url = string.Join(" ", args.Skip(1));
+            SetImageUrl(player, args[0], url);
+        }
+
+        [ChatCommand("pbclearimage")]
+        private void CmdClearImage(BasePlayer player, string command, string[] args)
+        {
+            if (!EnsureAdminPlayer(player))
+            {
+                return;
+            }
+
+            if (args.Length < 1)
+            {
+                SendReply(player, "Usage: /pbclearimage <scoreboard|lobbybutton|lobby|admin>");
+                return;
+            }
+
+            SetImageUrl(player, args[0], string.Empty);
+        }
+
         [ChatCommand("pbend")]
         private void CmdEndMatch(BasePlayer player, string command, string[] args)
         {
@@ -578,6 +662,43 @@ namespace Oxide.Plugins
             config.AutoStartEnabled = !config.AutoStartEnabled;
             SaveConfig();
             Reply(player, $"Auto start is now {(config.AutoStartEnabled ? "enabled" : "disabled")}.");
+        }
+
+        [ConsoleCommand("paintballarena.setimage")]
+        private void ConsoleSetImage(ConsoleSystem.Arg arg)
+        {
+            var player = arg.Player();
+            if (player != null && !EnsureAdminPlayer(player))
+            {
+                return;
+            }
+
+            if (arg.Args == null || arg.Args.Length < 2)
+            {
+                Reply(player, "Usage: paintballarena.setimage <scoreboard|lobbybutton|lobby|admin> <url>");
+                return;
+            }
+
+            var url = string.Join(" ", arg.Args.Skip(1));
+            SetImageUrl(player, arg.Args[0], url);
+        }
+
+        [ConsoleCommand("paintballarena.clearimage")]
+        private void ConsoleClearImage(ConsoleSystem.Arg arg)
+        {
+            var player = arg.Player();
+            if (player != null && !EnsureAdminPlayer(player))
+            {
+                return;
+            }
+
+            if (arg.Args == null || arg.Args.Length < 1)
+            {
+                Reply(player, "Usage: paintballarena.clearimage <scoreboard|lobbybutton|lobby|admin>");
+                return;
+            }
+
+            SetImageUrl(player, arg.Args[0], string.Empty);
         }
 
         [ConsoleCommand("paintballarena.end")]
@@ -1642,13 +1763,17 @@ namespace Oxide.Plugins
             AddLabel(container, adminPanel, $"Spectator Spawn: {StatusLabel(config.SpectatorSpawn)}", "0.6 0.75", "0.9 0.8", 14);
             AddLabel(container, adminPanel, $"Team A Spawns: {config.TeamASpawns.Count}", "0.1 0.68", "0.4 0.73", 14);
             AddLabel(container, adminPanel, $"Team B Spawns: {config.TeamBSpawns.Count}", "0.6 0.68", "0.9 0.73", 14);
+            AddLabel(container, adminPanel, $"Scoreboard Image: {ImageStatusLabel(config.HudScoreboardBackgroundUrl)}", "0.1 0.62", "0.4 0.67", 12);
+            AddLabel(container, adminPanel, $"Lobby Button Image: {ImageStatusLabel(config.HudLobbyButtonBackgroundUrl)}", "0.6 0.62", "0.9 0.67", 12);
+            AddLabel(container, adminPanel, $"Lobby Image: {ImageStatusLabel(config.LobbyBackgroundUrl)}", "0.1 0.56", "0.4 0.61", 12);
+            AddLabel(container, adminPanel, $"Admin Image: {ImageStatusLabel(config.AdminBackgroundUrl)}", "0.6 0.56", "0.9 0.61", 12);
 
-            AddButton(container, adminPanel, "Set Lobby Spawn", "paintballarena.setlobby", "0.1 0.55", "0.45 0.63");
-            AddButton(container, adminPanel, "Set Spectator Spawn", "paintballarena.setspectator", "0.55 0.55", "0.9 0.63");
-            AddButton(container, adminPanel, "Add Team A Spawn", "paintballarena.addteama", "0.1 0.42", "0.45 0.5");
-            AddButton(container, adminPanel, "Add Team B Spawn", "paintballarena.addteamb", "0.55 0.42", "0.9 0.5");
-            AddButton(container, adminPanel, "Clear Team A Spawns", "paintballarena.clearteama", "0.1 0.29", "0.45 0.37");
-            AddButton(container, adminPanel, "Clear Team B Spawns", "paintballarena.clearteamb", "0.55 0.29", "0.9 0.37");
+            AddButton(container, adminPanel, "Set Lobby Spawn", "paintballarena.setlobby", "0.1 0.48", "0.45 0.56");
+            AddButton(container, adminPanel, "Set Spectator Spawn", "paintballarena.setspectator", "0.55 0.48", "0.9 0.56");
+            AddButton(container, adminPanel, "Add Team A Spawn", "paintballarena.addteama", "0.1 0.38", "0.45 0.46");
+            AddButton(container, adminPanel, "Add Team B Spawn", "paintballarena.addteamb", "0.55 0.38", "0.9 0.46");
+            AddButton(container, adminPanel, "Clear Team A Spawns", "paintballarena.clearteama", "0.1 0.28", "0.45 0.36");
+            AddButton(container, adminPanel, "Clear Team B Spawns", "paintballarena.clearteamb", "0.55 0.28", "0.9 0.36");
             AddButton(container, adminPanel, "Close", "paintballarena.closeadmin", "0.35 0.12", "0.65 0.2", "0.8 0.2 0.2 0.9");
 
             CuiHelper.AddUi(player, container);
@@ -1662,6 +1787,11 @@ namespace Oxide.Plugins
         private string StatusLabel(SpawnPoint spawn)
         {
             return spawn == null ? "Not Set" : "Set";
+        }
+
+        private string ImageStatusLabel(string url)
+        {
+            return string.IsNullOrEmpty(url) ? "Not Set" : "Set";
         }
 
         private void AddLabel(CuiElementContainer container, string parent, string text, string anchorMin, string anchorMax, int fontSize)
