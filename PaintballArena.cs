@@ -695,9 +695,10 @@ namespace Oxide.Plugins
             {
                 return;
             }
+            var position = queue.Count + 1;
             queue.Add(player.userID);
 
-            SendReply(player, $"Side {side} is full. You are in the waiting queue (position #{queue.Count}).");
+            SendReply(player, $"Side {side} is full. You are in the waiting queue (position #{position}).");
         }
 
         private bool IsQueuedForSide(ulong userId, TeamSide side)
@@ -746,6 +747,7 @@ namespace Oxide.Plugins
                 playerSides[userId] = side;
                 var theme = side == TeamSide.A ? CurrentThemeA() : CurrentThemeB();
                 SendReply(player, $"A slot opened. You joined Side {side} ({theme.Name}).");
+                ShowHud(player);
             }
         }
 
